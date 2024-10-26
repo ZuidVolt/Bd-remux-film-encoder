@@ -137,6 +137,7 @@ class VideoProcessor:
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             probe_data = json.loads(result.stdout)
             # Ensure the loaded data matches our expected type
+
             self.probe_data = cast(ProbeData, probe_data)
             format_info = self.probe_data["format"]
             self.input_size_gb = float(format_info["size"]) / (1024**3)
@@ -404,7 +405,7 @@ def main() -> None:  # noqa: C901
             realtime="false",
             # extra params
             audio_codec="eac3",  # this is a backup if audio copy doesnt work
-            audio_channel=6,  # Set to 8 for 7.1 surround sound # TODO: make this work
+            audio_channel="6",  # Set to 8 for 7.1 surround sound # TODO: make this work
             # x265 params (only when videotoolbox doesnt work)
             hdr_params={
                 "max_cll": "1600,400",
