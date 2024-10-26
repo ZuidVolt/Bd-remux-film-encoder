@@ -391,7 +391,6 @@ def main() -> None:  # noqa: C901
         # Create optimized configuration
         config = EncodingConfig(
             target_size_gb=6.0,
-            preset=EncodingPreset.VERYSLOW,
             maintain_dolby_vision=True,
             copy_audio=True,
             copy_subtitles=True,
@@ -407,6 +406,7 @@ def main() -> None:  # noqa: C901
             audio_codec="eac3",  # this is a backup if audio copy doesnt work
             audio_channel="6",  # Set to 8 for 7.1 surround sound # TODO: make this work
             # x265 params (only when videotoolbox doesnt work)
+            preset=EncodingPreset.VERYSLOW,
             hdr_params={
                 "max_cll": "1600,400",
                 "master_display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)",
