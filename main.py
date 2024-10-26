@@ -7,6 +7,7 @@ import os
 from dotenv import load_dotenv
 from env_file_handler import check_env_file
 
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -15,6 +16,7 @@ logging.basicConfig(
         logging.FileHandler(f"encoding_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"),
     ],
 )
+
 logger = logging.getLogger(__name__)
 
 
@@ -107,6 +109,8 @@ class EncodingConfig:
         }
         self.realtime = realtime
         self.b_frames = b_frames
+        self.min_video_bitrate = min_video_bitrate
+        self.max_video_bitrate = max_video_bitrate
 
 
 class VideoProcessor:
@@ -402,6 +406,8 @@ def main() -> None:  # noqa: C901
             allow_sw_fallback=True,
             audio_bitrate="768k",  # Specify the bitrate for the TrueHD stream
             realtime="false",
+            min_video_bitrate=8_000_000,  # 8 Mbps
+            max_video_bitrate=30_000_000,  # 30 Mbps
             # extra params
             audio_codec="eac3",  # this is a backup if audio copy doesnt work
             audio_channel="6",  # Set to 8 for 7.1 surround sound # TODO: make this work
