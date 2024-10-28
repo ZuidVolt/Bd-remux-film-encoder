@@ -77,7 +77,7 @@ class VideoProcessor:
             logger.info(f"Input: {self.input_size_gb:.2f}GB, Duration: {self.duration:.2f}s")
             return self.probe_data
         except (subprocess.CalledProcessError, json.JSONDecodeError) as e:
-            raise ProbeError(f"Probe failed: {e!s}")  # noqa: B904
+            raise ProbeError(f"Probe failed: {e!s}") from e
 
     def _get_stream_indexes(self) -> Dict[str, List[int]]:
         if not self.probe_data:
