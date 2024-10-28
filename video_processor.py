@@ -110,29 +110,41 @@ class VideoProcessor:
         if not self.probe_data or self.duration <= 0:
             raise ValueError("Invalid probe data")
 
+        # Calculate total bits for target size with a 5% buffer for container overhead
         total_bits = self.config.target_size_gb * 8 * 1024**3 * 0.95
+
+        # Find the first video stream and get relevant metadata
         video_stream = next((s for s in self.probe_data["streams"] if s["codec_type"] == "video"), None)
         if not video_stream:
             raise ValueError("No video stream found")
 
-        # Calculate resolution multiplier
+        # Resolution and frame rate details
         height = int(video_stream.get("height", 0))
         frame_rate = eval(str(video_stream.get("r_frame_rate", "24/1")))
-        resolution_multiplier = {2160: 1.0, 1440: 0.7, 1080: 0.5}.get(height, 0.3)
-        if frame_rate > 30:
-            resolution_multiplier *= 1.5
 
-        # Calculate audio bits
+        # Resolution multiplier (adjusted for 10-bit depth)
+        resolution_multiplier = {2160: 1.0, 1440: 0.75, 1080: 0.55}.get(height, 0.35)
+        if frame_rate > 30:
+            resolution_multiplier *= 1.5  # Higher bitrate for high frame rate
+
+        # Codec adjustment for H.265 (HEVC) efficiency
+        codec_name = video_stream.get("codec_name", "")
+        codec_multiplier = 0.7 if codec_name == "hevc" else 1.0  # Lower bitrate for HEVC
+
+        # Total audio bits calculation based on number of audio streams
         audio_streams = sum(1 for s in self.probe_data["streams"] if s["codec_type"] == "audio")
         audio_bitrate = int(self.config.audio_bitrate.rstrip("k")) * 1000
         total_audio_bits = audio_streams * audio_bitrate * self.duration if self.config.copy_audio else 0
 
-        # Calculate target video bitrate
-        target_bitrate = int((total_bits - total_audio_bits) / self.duration * resolution_multiplier)
+        # Calculate target video bitrate, accounting for resolution, codec, and overhead
+        target_video_bits = (total_bits - total_audio_bits) * resolution_multiplier * codec_multiplier
+        target_bitrate = int(target_video_bits / self.duration)
+
+        # Apply min and max constraints from config and normalize to nearest million
         target_bitrate = max(self.config.min_video_bitrate, min(target_bitrate, self.config.max_video_bitrate))
         target_bitrate = (target_bitrate // 1_000_000) * 1_000_000
 
-        logger.info(f"Target video bitrate: {target_bitrate/1_000_000:.2f} Mbps")
+        logger.info(f"Target video bitrate: {target_bitrate / 1_000_000:.2f} Mbps")
         return target_bitrate
 
     def _build_command(self, output_path: Path, target_bitrate: int) -> List[str]:
