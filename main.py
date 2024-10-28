@@ -49,8 +49,8 @@ def main() -> None:
         check_env_file()
         load_dotenv()
 
-        input_file_path: str = os.getenv("INPUT_FILE")  # type: ignore
-        output_file_path: str = os.getenv("OUTPUT_FILE")  # type: ignore
+        input_file_path = os.getenv("INPUT_FILE")
+        output_file_path = os.getenv("OUTPUT_FILE")
 
         if input_file_path is None or output_file_path is None:
             raise ValueError("INPUT_FILE and OUTPUT_FILE environment variables must be set")
