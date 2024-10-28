@@ -14,7 +14,26 @@ logger = Logger(__name__)
 
 
 class VideoProcessor:
+    """
+    A class responsible for processing video files.
+
+    Attributes:
+        input_file (Path): The input video file.
+        config (EncodingConfig): The encoding configuration.
+        probe_data (ProbeData): The probe data of the input file.
+        input_size_gb (float): The size of the input file in GB.
+        duration (float): The duration of the input file in seconds.
+        hw_support (bool): Whether hardware acceleration is supported.
+    """
+
     def __init__(self, input_file: Union[str, Path], config: Optional[EncodingConfig] = None):
+        """
+        Initializes the VideoProcessor instance.
+
+        Args:
+            input_file (Union[str, Path]): The input video file.
+            config (Optional[EncodingConfig]): The encoding configuration. Defaults to None.
+        """
         self.input_file = Path(input_file)
         self.config = config or EncodingConfig()
         if not self.input_file.exists() or not self.input_file.is_file():
@@ -27,6 +46,15 @@ class VideoProcessor:
         self.hw_support: Optional[bool] = None
 
     def probe_file(self) -> ProbeData:
+        """
+        Probes the input file using ffprobe and returns the probe data.
+
+        Returns:
+            ProbeData: The probe data of the input file.
+
+        Raises:
+            ProbeError: If the probe fails.
+        """
         try:
             cmd = [
                 "ffprobe",
@@ -132,7 +160,6 @@ class VideoProcessor:
         if self.config.copy_subtitles:
             for idx in stream_indexes["subtitle"]:
                 cmd.extend(["-map", f"0:{idx}"])
-
         # Video encoding settings
         if use_hw:
             cmd.extend(
@@ -233,6 +260,15 @@ class VideoProcessor:
         return cmd
 
     def encode(self, output_path: Union[str, Path]) -> None:  # noqa: C901
+        """
+        Encode the input file to the specified output path.
+        Args:
+            output_path (Union[str, Path]): The path to the output file.
+
+        Raises:
+            FileExistsError: If the output file already exists.
+            EncodingError: If the encoding process fails.
+        """
         output_path = Path(output_path)
         if output_path.exists() and output_path.stat().st_size > 0:
             raise FileExistsError(f"Output file exists: {output_path}")
