@@ -104,7 +104,7 @@ def main() -> None:
         logger.log_final_stats(start_time)
 
     except Exception as err:
-        logger.error(f"\n=== Processing Failed ===")  # noqa: F541
+        logger.error("\n=== Processing Failed ===")
         logger.error(f"Error: {err!s}")
         logger.error("Stack trace:", exc_info=True)
         raise
