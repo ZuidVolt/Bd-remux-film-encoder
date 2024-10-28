@@ -4,7 +4,7 @@ import shutil
 import re
 import time
 from pathlib import Path
-from typing import Optional, List, Union, Dict, cast
+from typing import Optional, Union, Dict, List, cast
 
 from custom_logger import CustomLogger
 from utils import ProbeError, ProbeData, EncodingConfig, EncodingError
