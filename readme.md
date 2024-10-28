@@ -76,6 +76,10 @@ OUTPUT_FILE=/path/to/output
 python main.py
 ```
 
+### Advanced Usage
+
+you can change the config in the main.py file and see all the available setting in the config class in utils.py
+
 ## ⚙️ Configuration
 
 ### Encoding Presets
