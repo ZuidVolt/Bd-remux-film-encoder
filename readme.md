@@ -1,3 +1,4 @@
+
 # BD Remux Film Encoder
 
 A high-performance Python-based tool optimized for Apple Silicon Macs, designed to encode and remux Blu-ray discs into more compact and playable formats while maintaining exceptional quality.
@@ -13,6 +14,8 @@ A high-performance Python-based tool optimized for Apple Silicon Macs, designed 
 - **Batch Processing**: Support for processing multiple files sequentially
 - **Progress Tracking**: Real-time encoding progress and ETA display
 - **Flexible Output**: Customizable output formats and encoding settings
+- **Error Handling**: Robust error handling and logging system
+- **Configurable Settings**: Allows users to customize encoding settings and presets
 
 ## 📋 Requirements
 
@@ -78,7 +81,7 @@ python main.py
 
 ### Advanced Usage
 
-you can change the config in the main.py file and see all the available setting in the config class in utils.py
+You can change the config in the main.py file and see all the available settings in the config class in utils.py
 
 ## ⚙️ Configuration
 
@@ -89,6 +92,29 @@ you can change the config in the main.py file and see all the available setting 
 | fast | Low | Fastest | Largest |
 | medium | Good | Balanced | Balanced |
 | slow | Better | Slower | Smaller |
+
+### Configurable Settings
+
+- `target_size_gb`: Target file size in GB
+- `preset`: Encoding preset (fast, medium, slow)
+- `maintain_dolby_vision`: Preserve Dolby Vision metadata
+- `copy_audio`: Copy audio streams
+- `copy_subtitles`: Copy subtitle streams
+- `english_audio_only`: Only include English audio streams
+- `english_subtitles_only`: Only include English subtitle streams
+- `use_hardware_acceleration`: Use hardware acceleration
+- `hardware_encoder`: Hardware encoder to use
+- `fallback_encoder`: Fallback encoder to use
+- `quality_preset`: Quality preset for encoding
+- `allow_sw_fallback`: Allow software fallback for encoding
+- `audio_codec`: Audio codec to use
+- `audio_bitrate`: Audio bitrate to use
+- `audio_channel`: Audio channel layout to use
+- `min_video_bitrate`: Minimum video bitrate to use
+- `max_video_bitrate`: Maximum video bitrate to use
+- `hdr_params`: HDR parameters to use
+- `realtime`: Real-time encoding mode
+- `b_frames`: Number of B-frames to use
 
 ## 🔍 Advanced Features
 
