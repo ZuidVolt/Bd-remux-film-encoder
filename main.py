@@ -394,7 +394,7 @@ def main() -> None:  # noqa: C901
 
         # Create optimized configuration
         config = EncodingConfig(
-            target_size_gb=6.0,
+            target_size_gb=8.0,
             maintain_dolby_vision=True,
             copy_audio=True,
             copy_subtitles=True,
@@ -513,7 +513,7 @@ def main() -> None:  # noqa: C901
 
             # Verify output file integrity
             logger.info("\n=== Verifying Output File ===")
-            verify_cmd = ["ffprobe", "-v", "error", "-i", str(output_file), "-f", "null", "-"]
+            verify_cmd = ["ffprobe", "-v", "error", "-i", str(output_file), "-show_streams", "-show_format"]
             try:
                 verify_output = subprocess.run(verify_cmd, check=True, capture_output=True, text=True)
                 if verify_output.stderr:
