@@ -13,7 +13,7 @@ from utils import EncodingPreset, EncodingConfig
 logger = Logger(__name__)
 
 
-def main() -> None:  # noqa: C901
+def main() -> None:
     start_time = time.time()
     try:
         logger.info("=== Starting Video Processing ===")

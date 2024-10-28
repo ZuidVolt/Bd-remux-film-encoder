@@ -40,6 +40,7 @@ class CustomLogger(logging.Logger):
 
     def log_encoding_start(self, output_file, target_bitrate, cmd):
         self.info("\n=== Starting Encoding Process ===")
+        self.info(f"Output File: {output_file}")
         self.info(f"Target Bitrate: {target_bitrate/1_000_000:.2f} Mbps")
         self.info("FFmpeg Command:")
         self.info(" ".join(cmd))
