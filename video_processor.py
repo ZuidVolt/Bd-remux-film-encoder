@@ -130,6 +130,7 @@ class VideoProcessor:
         # Codec adjustment for H.265 (HEVC) efficiency
         codec_name = video_stream.get("codec_name", "")
         codec_multiplier = 0.7 if codec_name == "hevc" else 1.0  # Lower bitrate for HEVC
+        logger.info(f"Codec: {codec_name}, Resolution: {height}p, Frame Rate: {frame_rate:.2f}fps")
 
         # Total audio bits calculation based on number of audio streams
         audio_streams = sum(1 for s in self.probe_data["streams"] if s["codec_type"] == "audio")
