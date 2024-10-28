@@ -8,16 +8,30 @@ from dotenv import load_dotenv
 from env_file_handler import check_env_file
 
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler(f"encoding_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"),
-    ],
-)
+class CustomLogger(logging.Logger):
+    def __init__(self, name):
+        super().__init__(name)
+        self.setLevel(logging.INFO)
+        self.addHandler(logging.StreamHandler(sys.stdout))
+        file_handler = logging.FileHandler(f"encoding_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log", encoding="utf-8")
+        file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+        self.addHandler(file_handler)
 
-logger = logging.getLogger(__name__)
+    def info(self, msg, *args, **kwargs):
+        super().info(msg, *args, **kwargs)
+        self.handlers[-1].flush()
+
+    def warning(self, msg, *args, **kwargs):
+        super().warning(msg, *args, **kwargs)
+        self.handlers[-1].flush()
+
+    def error(self, msg, *args, **kwargs):
+        super().error(msg, *args, **kwargs)
+        self.handlers[-1].flush()
+
+
+# Create a custom logger
+logger = CustomLogger(__name__)
 
 
 class EncoderError(Exception):
