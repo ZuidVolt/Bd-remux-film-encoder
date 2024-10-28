@@ -1,8 +1,8 @@
 import os
 from pathlib import Path
-from custom_logger import CustomLogger
+from custom_logger import CustomLogger as Logger
 
-logger = CustomLogger(__name__)
+logger = Logger(__name__)
 
 
 def check_env_file() -> None:

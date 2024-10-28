@@ -6,11 +6,11 @@ import time
 from pathlib import Path
 from typing import Optional, Union, Dict, List, cast
 
-from custom_logger import CustomLogger
+from custom_logger import CustomLogger as Logger
 from utils import ProbeError, ProbeData, EncodingConfig, EncodingError
 
 # Create a custom logger
-logger = CustomLogger(__name__)
+logger = Logger(__name__)
 
 
 class VideoProcessor:
