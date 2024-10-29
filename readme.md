@@ -79,6 +79,12 @@ OUTPUT_FILE=/path/to/output
 python main.py
 ```
 
+or
+
+```bash
+make run
+```
+
 ### Advanced Usage
 
 You can change the config in the main.py file and see all the available settings in the config class in utils.py
