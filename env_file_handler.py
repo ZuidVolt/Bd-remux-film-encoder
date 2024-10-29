@@ -18,8 +18,8 @@ def check_env_file() -> None:
             logger.info("Creating new .env file...")
             # Create a new .env file if it doesn't exist
             with env_file_path.open("w", encoding="utf-8") as f:
-                f.write("INPUT_FILE=" "\n")
-                f.write("OUTPUT_FILE=" "\n")
+                f.write("INPUT_FILE=\n")
+                f.write("OUTPUT_FILE=\n")
             logger.info(".env file created successfully.")
             logger.info("Please fill in the INPUT_FILE and OUTPUT_FILE variables in the .env file.")
         except PermissionError:
@@ -34,7 +34,7 @@ def get_current_directory() -> Path:
     """
     Returns the current working directory.
     """
-    return Path(os.getcwd())  # noqa: PTH109
+    return Path(os.getcwd())
 
 
 def main() -> None:
