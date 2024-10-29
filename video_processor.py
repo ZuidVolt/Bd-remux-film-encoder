@@ -273,7 +273,7 @@ class VideoProcessor:
         cmd.extend(["-map_metadata", "0", "-map_chapters", "0", "-max_muxing_queue_size", "4096", str(output_path)])
         return cmd
 
-    def encode(self, output_path: Union[str, Path]) -> None:  # noqa: C901
+    def encode(self, output_path: Union[str, Path]) -> None:
         """
         Encode the input file to the specified output path.
         Args:
