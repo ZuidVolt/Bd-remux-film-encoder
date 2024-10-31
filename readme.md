@@ -3,6 +3,8 @@
 
 A high-performance Python-based tool optimized for Apple Silicon Macs, designed to encode and remux Blu-ray discs into more compact and playable formats while maintaining exceptional quality.
 
+Disclaimer: This tool is my personal project is expected to be full of bad practices and bad code (and a lot of bugs). It's not intended for production use without major modiﬁcations.
+
 ## 🚀 Features
 
 - **Apple Silicon Optimization**: Leverages Apple Silicon's hardware acceleration for maximum performance
