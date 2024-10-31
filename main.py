@@ -21,7 +21,7 @@ def main() -> None:
 
         # Create optimized configuration
         config = EncodingConfig(
-            target_size_gb=8.0,
+            target_size_gb=6.0,
             maintain_dolby_vision=True,
             copy_audio=True,
             copy_subtitles=True,
