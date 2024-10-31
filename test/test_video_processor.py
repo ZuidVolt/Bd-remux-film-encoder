@@ -1,9 +1,14 @@
+# test/test_video_processor.py
 import unittest
 from unittest.mock import patch, MagicMock
 from pathlib import Path
 import json
 import subprocess
-from video_processor import VideoProcessor, EncodingConfig, ProbeError, EncodingError
+from video_processor import VideoProcessor
+from utils import EncodingConfig, ProbeError, EncodingError
+from custom_logger import CustomLogger as Logger
+
+logger = Logger(__name__)
 
 
 # TODO: NOT fully implemented yet
@@ -144,6 +149,7 @@ class TestVideoProcessor(unittest.TestCase):
     @patch("subprocess.run")
     def test_encode(self, mock_run, mock_exists, mock_stat, mock_popen):
         """Test encoding process."""
+        logger.debug("Starting test_encode")
         processor = VideoProcessor(self.mock_input_path)
 
         # Mock probe file
@@ -162,15 +168,39 @@ class TestVideoProcessor(unittest.TestCase):
         mock_exists.return_value = False
 
         output_path = Path("/fake/output/video.mkv")
-        processor.encode(output_path)
+
+        # Function to update the mock_exists return value after encoding
+        def update_mock_exists():
+            mock_exists.return_value = True
+
+        # Use a context manager to update the return value of mock_exists after encoding
+        class MockExistsContext:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                update_mock_exists()
+
+        # Use the context manager to update the return value of mock_exists after encoding
+        with MockExistsContext():
+            logger.debug("Starting encoding process")
+            processor.encode(output_path)
+            logger.debug("Encoding process completed successfully")
 
         # Ensure output file exists after encoding
-        mock_exists.return_value = True
+        self.assertTrue(mock_exists.return_value)
+
+        # Reset the mock_exists return value for the failure test
+        mock_exists.return_value = False
 
         # Test encoding failure
         mock_process.returncode = 1
+        logger.debug("Testing encoding failure")
         with self.assertRaises(EncodingError):
             processor.encode(output_path)
+        logger.debug("Encoding failure test completed")
+
+        logger.debug("Finished test_encode")
 
     def test_get_stream_indexes(self):
         """Test stream index extraction."""
