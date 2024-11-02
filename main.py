@@ -21,7 +21,7 @@ def main() -> None:
 
         # Create optimized configuration
         config = EncodingConfig(
-            target_size_gb=6.0,
+            target_size_gb=4.0,
             maintain_dolby_vision=True,
             copy_audio=True,
             copy_subtitles=True,
@@ -91,6 +91,7 @@ def main() -> None:
         target_bitrate = processor._calculate_bitrate()
         cmd = processor._build_command(output_file, target_bitrate)
         logger.log_encoding_start(output_file, target_bitrate, cmd)
+        logger.log_estimated_Duration(processor.duration)
         encoding_start_time = time.time()
         processor.encode(output_file)
         encoding_duration = time.time() - encoding_start_time
