@@ -150,7 +150,7 @@ class CustomLogger(logging.Logger):
         self.info(f"\nTotal Processing Time: {total_duration/3600:.2f} hours")
         self.info("=== Processing Completed Successfully ===")
 
-    def log_estimated_Duration(self, duration) -> None:
+    def log_estimated_duration(self, duration) -> None:
         total_frames_guess: int = duration * 24
         avg_time_per_frame: float = (
             0.018  # This is a rough estimate and may vary based on the specifics of the default encoding process

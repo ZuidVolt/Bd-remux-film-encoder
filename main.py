@@ -91,7 +91,7 @@ def main() -> None:
         target_bitrate = processor._calculate_bitrate()
         cmd = processor._build_command(output_file, target_bitrate)
         logger.log_encoding_start(output_file, target_bitrate, cmd)
-        logger.log_estimated_Duration(processor.duration)
+        logger.log_estimated_duration(processor.duration)
         encoding_start_time = time.time()
         processor.encode(output_file)
         encoding_duration = time.time() - encoding_start_time
