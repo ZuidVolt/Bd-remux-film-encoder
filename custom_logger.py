@@ -153,7 +153,7 @@ class CustomLogger(logging.Logger):
     def log_estimated_Duration(self, duration) -> None:
         total_frames_guess: int = duration * 24
         avg_time_per_frame: float = (
-            0.018  # This is a rough estimate and may vary based on the specifics of teh default encoding process
+            0.018  # This is a rough estimate and may vary based on the specifics of the default encoding process
         )
         estimated_time_in_seconds: float = total_frames_guess * avg_time_per_frame
         estimated_time_in_mins: float = estimated_time_in_seconds / 60
