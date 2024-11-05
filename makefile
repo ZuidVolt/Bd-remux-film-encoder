@@ -16,7 +16,7 @@ coverage:
 	coverage run -m pytest
 	coverage report -m
 	coverage html
-	
+
 security:
 	ruff check --extend-select S --fix
 
