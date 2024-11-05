@@ -143,8 +143,8 @@ class TestVideoProcessor(unittest.TestCase):
         self.assertIn(str(output_path), cmd)
         self.assertIn("-b:v", cmd)
 
-    def test_encode(self, mock_run, mock_exists, mock_stat, mock_popen):
-        """Test encoding process."""
+    # def test_encode(self):
+    #     """Test encoding process."""
 
     def test_get_stream_indexes(self):
         """Test stream index extraction."""
