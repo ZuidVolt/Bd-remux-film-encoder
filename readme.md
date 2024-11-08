@@ -202,4 +202,4 @@ This project is licensed under the Apache License, Version 2.0 with important ad
 ---
 
 🔍 Keywords:
-Blu-ray encoding, video compression, FFmpeg, Python automation, macOS optimization, Apple Silicon, M1/M2 optimization, VideoToolbox, hardware acceleration, video transcoding, Dolby Vision, HDR preservation, media processing, remuxing, batch encoding, high-quality compression, video archival, multimedia tools, AV1 encoding, HEVC/H.265, video quality optimization
+Blu-ray encoding, video compression, FFmpeg, Python automation, macOS optimization, Apple Silicon, M1/M2/M3/M4 optimization, VideoToolbox, hardware acceleration, video transcoding, Dolby Vision, HDR preservation, media processing, remuxing, batch encoding, high-quality compression, video archival, multimedia tools, AV1 encoding, HEVC/H.265, video quality optimization
