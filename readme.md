@@ -172,9 +172,9 @@ The encoder automatically detects and utilizes Apple Silicon's hardware accelera
 
 | Content Type | Source Size | Output Size | Encoding Time | Quality Loss |
 |--------------|-------------|-------------|---------------|--------------|
-| 1080p Movie | 30GB | 5GB | ~30 mins | Negligible |
-| 4K HDR Movie | 60GB | 7GB | ~90 mins | Minimal |
-| 4K DV Movie | 80GB | 11GB | ~120 mins | Minimal |
+| 1080p Movie | 30GB | 5GB | ~58 mins | Negligible |
+| 4K HDR Movie | 60GB | 7GB | ~58 mins | Minimal |
+| 4K DV Movie | 80GB | 11GB | ~58 mins | Minimal |
 
 - _Times measured on M3 with 16GB RAM_
 
