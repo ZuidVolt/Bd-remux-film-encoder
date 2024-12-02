@@ -5,7 +5,7 @@ import shutil
 import re
 import time
 from pathlib import Path
-from typing import Optional, Union, Dict, List, cast
+from typing import Optional, Union, cast
 
 from custom_logger import CustomLogger as Logger
 from utils import ProbeError, ProbeData, EncodingConfig, EncodingError
@@ -88,7 +88,7 @@ class VideoProcessor:
             self.duration = float(format_info["duration"])
 
             # Get video stream
-            video_stream = next((s for s in self.probe_data["streams"] if s["codec_type"] == "video"), None)
+            video_stream = next((s for s in self.probe_data["streams"] if s["codec_type"] == "video"), None)  # type: ignore
 
             if video_stream:
                 # Detect HDR/DoVi features
@@ -121,7 +121,7 @@ class VideoProcessor:
                 logger.info(
                     f"Video: {self.video_metadata['width']}x{self.video_metadata['height']}, "
                     f"{'HDR10' if self.video_metadata['is_hdr10'] else ''}"
-                    f"{'Dolby Vision' if self.video_metadata['has_dovi'] else ''}"
+                    f"{'Dolby Vision' if self.video_metadata['has_dovi'] else ''}",
                 )
 
             return self.probe_data
@@ -129,30 +129,27 @@ class VideoProcessor:
         except (subprocess.CalledProcessError, json.JSONDecodeError) as e:
             raise ProbeError(f"Probe failed: {e!s}") from e
 
-    def _get_stream_indexes(self) -> Dict[str, List[int]]:
+    def _get_stream_indexes(self) -> dict[str, list[int]]:
         if not self.probe_data:
             self.probe_file()
 
         if not self.probe_data:  # This check is for type checker
             raise ValueError("Probe data is still None after probe_file()")
 
-        indexes: Dict[str, List[int]] = {"video": [], "audio": [], "subtitle": []}
+        indexes: dict[str, list[int]] = {"video": [], "audio": [], "subtitle": []}
         for stream in self.probe_data["streams"]:
             stream_type = stream.get("codec_type", "")
             if stream_type not in indexes:
                 continue
 
-            if (
-                self.config.english_audio_only
-                and stream_type == "audio"
-                or self.config.english_subtitles_only
-                and stream_type == "subtitle"
+            if (self.config.english_audio_only and stream_type == "audio") or (
+                self.config.english_subtitles_only and stream_type == "subtitle"
             ):
                 tags = stream.get("tags", {})
                 if tags.get("language", "").lower() in ["eng", "english"]:
-                    indexes[stream_type].append(stream["index"])
+                    indexes[stream_type].append(stream["index"])  # type: ignore
             else:
-                indexes[stream_type].append(stream["index"])
+                indexes[stream_type].append(stream["index"])  # type: ignore
 
         return indexes
 
@@ -232,7 +229,7 @@ class VideoProcessor:
         codec_multiplier = 0.7 if codec_name == "hevc" else 1.0  # HEVC is more efficient
 
         # Calculate audio bitrate requirements
-        audio_streams = sum(1 for s in self.probe_data["streams"] if s["codec_type"] == "audio")
+        audio_streams = sum(1 for s in self.probe_data["streams"] if s["codec_type"] == "audio")  # type: ignore
         audio_bitrate = int(self.config.audio_bitrate.rstrip("k")) * 1000
         total_audio_bits = audio_streams * audio_bitrate * self.duration if self.config.copy_audio else 0
 
@@ -268,15 +265,15 @@ class VideoProcessor:
 
         return target_bitrate
 
-    def _build_command(self, output_path: Path, target_bitrate: int) -> List[str]:
+    def _build_command(self, output_path: Path, target_bitrate: int) -> list[str]:
         self._check_dolby_vision()
 
         if self.hw_support is None:
             self.hw_support = bool(
-                subprocess.run(["ffmpeg", "-encoders"], capture_output=True, text=True).stdout.find(
-                    self.config.hardware_encoder
+                subprocess.run(["ffmpeg", "-encoders"], capture_output=True, text=True, check=False).stdout.find(
+                    self.config.hardware_encoder,
                 )
-                != -1
+                != -1,
             )
 
         use_hw = self.config.use_hardware_acceleration and self.hw_support
@@ -351,7 +348,7 @@ class VideoProcessor:
                     # Container tag
                     "-tag:v",
                     "dvh1",  # Dolby Vision tag
-                ]
+                ],
             )
 
         if use_hw:
@@ -393,11 +390,11 @@ class VideoProcessor:
                     self.config.realtime,
                     "-bf",
                     self.config.b_frames,
-                ]
+                ],
             )
         else:
             x265_params = [
-                f"bitrate={target_bitrate//1000}",
+                f"bitrate={target_bitrate // 1000}",
                 "hdr10=1",
                 f"colorprim={video_stream.get('color_primaries', 'bt2020')}",
                 f"transfer={video_stream.get('color_transfer', 'smpte2084')}",
@@ -418,7 +415,7 @@ class VideoProcessor:
                     "main10",
                     "-pix_fmt",
                     "yuv420p10le",
-                ]
+                ],
             )
 
         # Audio and subtitle settings
@@ -431,7 +428,7 @@ class VideoProcessor:
                     self.config.audio_bitrate,
                     "-metadata:s:a",
                     "spatial_audio=1",
-                ]
+                ],
             )
         else:
             cmd.extend(
@@ -442,7 +439,7 @@ class VideoProcessor:
                     self.config.audio_bitrate,
                     "-metadata:s:a",
                     "spatial_audio=1",
-                ]
+                ],
             )
 
         if self.config.copy_subtitles:
