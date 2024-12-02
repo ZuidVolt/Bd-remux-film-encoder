@@ -7,6 +7,7 @@ import subprocess
 from video_processor import VideoProcessor
 from utils import EncodingConfig, ProbeError, EncodingError  # noqa
 from custom_logger import CustomLogger as Logger
+import pytest
 
 logger = Logger(__name__)
 
@@ -68,18 +69,18 @@ class TestVideoProcessor(unittest.TestCase):
         """Test VideoProcessor initialization."""
         # Test successful initialization
         processor = VideoProcessor(self.mock_input_path)
-        self.assertEqual(processor.input_file, self.mock_input_path)
-        self.assertIsInstance(processor.config, EncodingConfig)
+        assert processor.input_file == self.mock_input_path
+        assert isinstance(processor.config, EncodingConfig)
 
         # Test file not found
         self.mock_exists.return_value = False
-        with self.assertRaises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError):
             VideoProcessor(self.mock_input_path)
 
         # Test ffmpeg not found
         self.mock_exists.return_value = True
         self.mock_which.return_value = False
-        with self.assertRaises(OSError):
+        with pytest.raises(OSError):
             VideoProcessor(self.mock_input_path)
 
     @patch("subprocess.run")
@@ -90,13 +91,13 @@ class TestVideoProcessor(unittest.TestCase):
         processor = VideoProcessor(self.mock_input_path)
         probe_data = processor.probe_file()
 
-        self.assertEqual(probe_data, self.mock_probe_data)
-        self.assertEqual(processor.input_size_gb, 1.0)
-        self.assertEqual(processor.duration, 3600.0)
+        assert probe_data == self.mock_probe_data
+        assert processor.input_size_gb == 1.0
+        assert processor.duration == 3600.0
 
         # Test probe failure
         mock_run.side_effect = subprocess.CalledProcessError(1, [])
-        with self.assertRaises(ProbeError):
+        with pytest.raises(ProbeError):
             processor.probe_file()
 
     def test_calculate_bitrate(self):
@@ -118,8 +119,8 @@ class TestVideoProcessor(unittest.TestCase):
         bitrate = processor._calculate_bitrate()
 
         # Assert bitrate is within expected range
-        self.assertGreater(bitrate, processor.config.min_video_bitrate)
-        self.assertLessEqual(bitrate, processor.config.max_video_bitrate)
+        assert bitrate > processor.config.min_video_bitrate
+        assert bitrate <= processor.config.max_video_bitrate
 
     @patch("subprocess.run")
     def test_build_command(self, mock_run):
@@ -137,11 +138,11 @@ class TestVideoProcessor(unittest.TestCase):
         cmd = processor._build_command(output_path, target_bitrate)
 
         # Verify command structure
-        self.assertEqual(cmd[0], "ffmpeg")
-        self.assertIn("-i", cmd)
-        self.assertIn(str(self.mock_input_path), cmd)
-        self.assertIn(str(output_path), cmd)
-        self.assertIn("-b:v", cmd)
+        assert cmd[0] == "ffmpeg"
+        assert "-i" in cmd
+        assert str(self.mock_input_path) in cmd
+        assert str(output_path) in cmd
+        assert "-b:v" in cmd
 
     # def test_encode(self):
     #     """Test encoding process."""
@@ -153,12 +154,12 @@ class TestVideoProcessor(unittest.TestCase):
 
         indexes = processor._get_stream_indexes()
 
-        self.assertIn("video", indexes)
-        self.assertIn("audio", indexes)
-        self.assertIn("subtitle", indexes)
-        self.assertEqual(indexes["video"], [0])
-        self.assertEqual(indexes["audio"], [1])
-        self.assertEqual(indexes["subtitle"], [])
+        assert "video" in indexes
+        assert "audio" in indexes
+        assert "subtitle" in indexes
+        assert indexes["video"] == [0]
+        assert indexes["audio"] == [1]
+        assert indexes["subtitle"] == []
 
 
 if __name__ == "__main__":
