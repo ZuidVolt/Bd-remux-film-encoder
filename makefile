@@ -8,8 +8,9 @@ run-pypy:
 # main check (Enforced before commit)
 check:
 	ruff format --line-length 120 .
-	ruff check --extend-select F,W,N,C90,B,UP,RET,SIM,RUF,NPY,PD,ARG,TCH,TID,PTH,Q,ISC,PIE,YTT,ASYNC,C4,T10 --fix --unsafe-fixes --ignore "PD901,C901,PTH109" .
+	ruff check --extend-select F,W,N,C90,B,UP,RET,SIM,RUF,NPY,PD,ARG,TCH,TID,PTH,Q,ISC,PIE,YTT,ASYNC,C4,T10,A,COM,RSE,E --fix --unsafe-fixes --ignore "PD901,C901,PTH109,E501" .
 	mypy --check-untyped-defs .
+	pyright .
 
 # Additional analysis checks (not Enforced)
 
