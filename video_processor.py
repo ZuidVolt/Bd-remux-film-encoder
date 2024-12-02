@@ -188,6 +188,23 @@ class VideoProcessor:
         """
         Calculates target bitrate with enhanced HDR/DoVi handling.
         """
+        dovi_profile_high_complexity = 7
+
+        # Frame Rate Thresholds
+        high_framerate_threshold = 30
+
+        # Bit Depth Constants
+        standard_bit_depth = 8
+
+        # Bitrate Multipliers
+        dovi_profile_high_multiplier = 1.3
+        dovi_profile_default_multiplier = 1.2
+        hdr_10_bitrate_multiplier = 1.15
+        hlg_bitrate_multiplier = 1.1
+        high_framerate_multiplier = 1.5
+        high_bit_depth_multiplier = 1.1
+        hevc_efficiency_multiplier = 0.7
+
         if not self.probe_data or self.duration <= 0:
             raise ValueError("Invalid probe data")
 
@@ -209,24 +226,30 @@ class VideoProcessor:
         if vm["has_dovi"]:
             # DoVi needs more bitrate, especially for profile 7
             dovi_profile = vm.get("dovi_profile", 5)
-            content_type_multiplier = 1.3 if dovi_profile == 7 else 1.2
+            content_type_multiplier = (
+                dovi_profile_high_multiplier
+                if dovi_profile == dovi_profile_high_complexity
+                else dovi_profile_default_multiplier
+            )
         elif vm["is_hdr10"]:
-            content_type_multiplier = 1.15  # HDR10 needs slightly more than SDR
+            content_type_multiplier = hdr_10_bitrate_multiplier  # HDR10 needs slightly more than SDR
         elif vm["is_hlg"]:
-            content_type_multiplier = 1.1  # HLG needs slightly more than SDR
+            content_type_multiplier = hlg_bitrate_multiplier  # HLG needs slightly more than SDR
 
         # Frame rate handling
         frame_rate = vm["frame_rate"]
-        if frame_rate > 30:
-            content_type_multiplier *= 1.5  # Higher bitrate for high frame rate
+        if frame_rate > high_framerate_threshold:
+            content_type_multiplier *= high_framerate_multiplier  # Higher bitrate for high frame rate
 
         # Bit depth multiplier
         bit_depth = vm["bits_per_raw_sample"]
-        bit_depth_multiplier = 1.0 if bit_depth <= 8 else 1.1  # 10-bit needs more bitrate
+        bit_depth_multiplier = (
+            1.0 if bit_depth <= standard_bit_depth else high_bit_depth_multiplier
+        )  # 10-bit needs more bitrate
 
         # Codec efficiency
         codec_name = vm["codec_name"]
-        codec_multiplier = 0.7 if codec_name == "hevc" else 1.0  # HEVC is more efficient
+        codec_multiplier = hevc_efficiency_multiplier if codec_name == "hevc" else 1.0  # HEVC is more efficient
 
         # Calculate audio bitrate requirements
         audio_streams = sum(1 for s in self.probe_data["streams"] if s["codec_type"] == "audio")  # type: ignore
@@ -459,6 +482,9 @@ class VideoProcessor:
             FileExistsError: If the output file already exists.
             EncodingError: If the encoding process fails.
         """
+
+        encoding_timeout_seconds = 30
+
         output_path = Path(output_path)
         if output_path.exists() and output_path.stat().st_size > 0:
             raise FileExistsError(f"Output file exists: {output_path}")
@@ -492,7 +518,7 @@ class VideoProcessor:
                     elif "error" in line.lower():
                         logger.error(line.strip())
 
-                if time.time() - last_progress > 30:
+                if time.time() - last_progress > encoding_timeout_seconds:
                     process.terminate()
                     raise EncodingError("Encoding stalled")
 
