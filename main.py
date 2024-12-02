@@ -70,7 +70,7 @@ def main() -> None:
         logger.info(f"Audio Settings: {config.audio_codec} @ {config.audio_bitrate}")
         logger.info(
             f"Language Filters: English Audio Only: {config.english_audio_only}, "
-            f"English Subtitles Only: {config.english_subtitles_only}"
+            f"English Subtitles Only: {config.english_subtitles_only}",
         )
 
         # Check system capabilities
