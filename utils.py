@@ -1,5 +1,5 @@
 # utils.py
-from typing import Optional, TypedDict, Dict, Any, List
+from typing import Optional, TypedDict, Any
 from enum import Enum
 
 
@@ -37,12 +37,12 @@ class StreamDict(TypedDict, total=False):
     color_transfer: str
     color_primaries: str
     r_frame_rate: str
-    tags: Dict[str, str]
+    tags: dict[str, str]
 
 
 class ProbeData(TypedDict):
-    streams: List[StreamDict]
-    format: Dict[str, Any]
+    streams: list[StreamDict]
+    format: dict[str, Any]
 
 
 class SideData(TypedDict):
@@ -73,7 +73,7 @@ class EncodingConfig:
         audio_channel: str = "8",
         min_video_bitrate: int = 8_000_000,  # 8 Mbps
         max_video_bitrate: int = 30_000_000,  # 30 Mbps
-        hdr_params: Optional[Dict[str, str]] = None,
+        hdr_params: Optional[dict[str, str]] = None,
         realtime: str = "true",
         b_frames: str = "2",
     ):
