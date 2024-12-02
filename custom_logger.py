@@ -94,7 +94,7 @@ class CustomLogger(logging.Logger):
         """Maintains exact original interface"""
         self.info("\n=== Starting Encoding Process ===")
         self.info(f"Output File: {output_file}")
-        self.info(f"Target Bitrate: {target_bitrate/1_000_000:.2f} Mbps")
+        self.info(f"Target Bitrate: {target_bitrate / 1_000_000:.2f} Mbps")
         self.info("FFmpeg Command:")
         self.info(" ".join(str(c) for c in cmd))
 
@@ -109,8 +109,8 @@ class CustomLogger(logging.Logger):
             self.info(f"Input Size: {input_size:.2f} GB")
             self.info(f"Output Size: {output_size:.2f} GB")
             self.info(f"Compression Ratio: {compression_ratio:.2f}:1")
-            self.info(f"Encoding Duration: {encoding_duration/3600:.2f} hours")
-            self.info(f"Average Processing Speed: {(input_size*1024)/(encoding_duration/60):.2f} MB/minute")
+            self.info(f"Encoding Duration: {encoding_duration / 3600:.2f} hours")
+            self.info(f"Average Processing Speed: {(input_size * 1024) / (encoding_duration / 60):.2f} MB/minute")
         except (OSError, ZeroDivisionError) as e:
             self.error(f"Error calculating file statistics: {e!s}")
 
@@ -147,7 +147,7 @@ class CustomLogger(logging.Logger):
     def log_final_stats(self, start_time):
         """Maintains exact original interface"""
         total_duration = time.time() - start_time
-        self.info(f"\nTotal Processing Time: {total_duration/3600:.2f} hours")
+        self.info(f"\nTotal Processing Time: {total_duration / 3600:.2f} hours")
         self.info("=== Processing Completed Successfully ===")
 
     def log_estimated_duration(self, duration) -> None:
