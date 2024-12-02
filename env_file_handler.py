@@ -1,5 +1,4 @@
 # env_file_handler.py
-import os
 from pathlib import Path
 from custom_logger import CustomLogger as Logger
 
@@ -34,7 +33,7 @@ def get_current_directory() -> Path:
     """
     Returns the current working directory.
     """
-    return Path(os.getcwd())
+    return Path.cwd()
 
 
 def main() -> None:
