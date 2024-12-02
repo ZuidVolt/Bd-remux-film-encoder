@@ -12,6 +12,7 @@ check:
 	mypy --check-untyped-defs .
 
 # Additional analysis checks (not Enforced)
+
 coverage:
 	coverage run -m pytest
 	coverage report -m
@@ -25,3 +26,15 @@ radon: # cyclomatic complexity (exlude venv and archive)
 
 radon-mi: # maintainability index (exlude venv and archive)
 	find . -type f -name "*.py" ! -path "./archive/*" ! -path "./.venv/*" | xargs radon mi -s
+
+vulture: # unused code (exlude venv and archive)
+	find . -type f -name "*.py" ! -path "./archive/*" ! -path "./.venv/*" | xargs vulture # --min-confidence 80
+
+pylyzer:
+	find . -type f -name "*.py" ! -path "./archive/*" ! -path "./.venv/*" | xargs pylyzer --disable
+# Define the target for grepping Python string
+gps:
+		@grep -r --include="*.py" --exclude-dir=".venv" --exclude-dir="archive" "$(string)" .
+
+# Define a variable for the string to search
+string ?= "SideData"
