@@ -45,12 +45,12 @@ class ProbeData(TypedDict):
     format: dict[str, Any]
 
 
-class SideData(TypedDict):
-    side_data_type: str
-    dv_profile: int
-    dv_bl_present_flag: int
-    dv_el_present_flag: int
-    dv_bl_signal_compatibility_id: int
+# class SideData(TypedDict):
+#     side_data_type: str
+#     dv_profile: int
+#     dv_bl_present_flag: int
+#     dv_el_present_flag: int
+#     dv_bl_signal_compatibility_id: int
 
 
 class EncodingConfig:
