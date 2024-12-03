@@ -29,7 +29,7 @@ radon-mi: # maintainability index (exlude venv and archive)
 	find . -type f -name "*.py" ! -path "./archive/*" ! -path "./.venv/*" | xargs radon mi -s
 
 vulture: # unused code (exlude venv and archive)
-	find . -type f -name "*.py" ! -path "./archive/*" ! -path "./.venv/*" | xargs vulture # --min-confidence 80
+	find . -type f -name "*.py" ! -path "./archive/*" ! -path "./.venv/*" | xargs vulture --min-confidence 80
 
 pylyzer:
 	find . -type f -name "*.py" ! -path "./archive/*" ! -path "./.venv/*" | xargs pylyzer --disable
