@@ -15,6 +15,7 @@ MIN_REQUIRED_MEMORY = 4 * 1024 * 1024 * 1024  # 4 GB
 MIN_BITRATE = 1_000_000  # 1 Mbps
 MAX_BITRATE = 30_000_000  # 30 Mbps
 MIN_VALID_SIZE = 100 * 1024 * 1024  # 100 MB
+MIN_HEADER_LENGTH = 8  # Minimum length required for most video file signatures
 
 
 def log_error_and_return_false(message: str) -> bool:
@@ -52,7 +53,7 @@ def is_valid_video_header(header: bytes) -> bool:
     # Common video file signatures
     signatures = {"mkv": b"\x1a\x45\xdf\xa3", "mp4": b"ftyp", "avi": b"RIFF", "mov": b"moov"}
 
-    if len(header) < 8:  # Need at least 8 bytes for most signatures
+    if len(header) < MIN_HEADER_LENGTH:  # Need at least MIN_HEADER_LENGTH bytes for most signatures
         return log_error_and_return_false("File header is too short to determine validity.")
 
     # Check for MKV signature at start
@@ -60,7 +61,7 @@ def is_valid_video_header(header: bytes) -> bool:
         return True
 
     # Check for MP4/MOV signatures (they can appear slightly offset)
-    if any(sig in header[:8] for sig in [signatures["mp4"], signatures["mov"]]):
+    if any(sig in header[:MIN_HEADER_LENGTH] for sig in [signatures["mp4"], signatures["mov"]]):
         return True
 
     # Check for AVI signature

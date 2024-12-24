@@ -1,4 +1,4 @@
-PYTHON_FILES := custom_logger.py main.py utils.py video_processor.py
+PYTHON_FILES := custom_logger.py main.py utils.py video_processor.py validate.py
 
 
 .PHONY: format ruff-check mypy-strict pyright-check check coverage security radon radon-mi vulture
