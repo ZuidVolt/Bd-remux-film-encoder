@@ -1,19 +1,25 @@
+PYTHON_FILES := custom_logger.py main.py utils.py video_processor.py
 
-run:
-	python3 main.py
 
-run-pypy:
-	pypy3 main.py
+.PHONY: format ruff-check mypy-strict pyright-check check coverage security radon radon-mi vulture
 
 # main check (Enforced before commit)
-check:
+
+format:
 	ruff format --line-length 120 .
-	ruff check --extend-select F,W,N,C90,B,UP,RET,SIM,RUF,NPY,PD,ARG,TCH,TID,PTH,Q,ISC,PIE,YTT,ASYNC,C4,T10,A,COM,RSE,E --fix --unsafe-fixes --ignore "PD901,C901,PTH109,E501" .
-	mypy --check-untyped-defs .
-	pyright .
+
+ruff-check:
+	ruff check --extend-select F,W,N,C90,B,UP,RET,SIM,RUF,NPY,PD,ARG,TCH,TID,PTH,Q,ISC,PIE,YTT,ASYNC,C4,T10,A,COM,RSE,PL,E,PGH --fix --unsafe-fixes --ignore "PLR0913,PD901,E501,G004,RUF100,PGH003,PLR0911,PLR0912" $(PYTHON_FILES)
+
+mypy-strict:
+	mypy --strict $(PYTHON_FILES)
+
+pyright-check:
+	pyright $(PYTHON_FILES)
+
+check: format ruff-check mypy-strict pyright-check
 
 # Additional analysis checks (not Enforced)
-
 coverage:
 	coverage run -m pytest
 	coverage report -m
@@ -22,20 +28,11 @@ coverage:
 security:
 	ruff check --extend-select S --fix
 
-radon: # cyclomatic complexity (exlude venv and archive)
-	find . -type f -name "*.py" ! -path "./archive/*" ! -path "./.venv/*" | xargs radon cc -a -nc -s
+radon: # cyclomatic complexity
+	radon cc -a -nc -s $(PYTHON_FILES)
 
-radon-mi: # maintainability index (exlude venv and archive)
-	find . -type f -name "*.py" ! -path "./archive/*" ! -path "./.venv/*" | xargs radon mi -s
+radon-mi: # maintainability index
+	radon mi -s $(PYTHON_FILES)
 
-vulture: # unused code (exlude venv and archive)
-	find . -type f -name "*.py" ! -path "./archive/*" ! -path "./.venv/*" | xargs vulture --min-confidence 80
-
-pylyzer:
-	find . -type f -name "*.py" ! -path "./archive/*" ! -path "./.venv/*" | xargs pylyzer --disable
-# Define the target for grepping Python string
-gps:
-		@grep -r --include="*.py" --exclude-dir=".venv" --exclude-dir="archive" "$(string)" .
-
-# Define a variable for the string to search
-string ?= "SideData"
+vulture: # unused code
+	vulture $(PYTHON_FILES)
