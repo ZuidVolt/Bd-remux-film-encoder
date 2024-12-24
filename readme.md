@@ -1,9 +1,6 @@
-
 # BD Remux Film Encoder
 
 A high-performance Python-based tool optimized for Apple Silicon Macs, designed to encode and remux Blu-ray discs into more compact and playable formats while maintaining exceptional quality.
-
-Disclaimer: This tool is my personal project is expected to be full of bad practices and bad code (and a lot of bugs). It's not intended for production use without major modiﬁcations.
 
 ## 🚀 Features
 
@@ -18,6 +15,29 @@ Disclaimer: This tool is my personal project is expected to be full of bad pract
 - **Flexible Output**: Customizable output formats and encoding settings
 - **Error Handling**: Robust error handling and logging system
 - **Configurable Settings**: Allows users to customize encoding settings and presets
+- **Format Detection**: Automatic detection and validation of video file formats
+- **Advanced HDR Support**: Comprehensive HDR10, HLG, and Dolby Vision metadata handling
+- **Intelligent Bitrate Calculation**: Dynamic bitrate adjustment based on:
+  - Content resolution
+  - Frame rate
+  - HDR/Dolby Vision presence
+  - Bit depth
+  - Codec efficiency
+- **Input Validation**: Thorough validation of input files, system resources, and encoding settings
+- **Command Line Interface**: Support for both CLI arguments and environment variables
+- **Automatic Output Organization**: Creates a "finished" directory for outputs when using CLI
+- **Enhanced Audio Handling**: Support for:
+  - Dolby Digital Plus
+  - Dolby Atmos
+  - Spatial Audio
+  - Multiple audio stream selection
+- **Real-time Progress Monitoring**: Frame-by-frame progress tracking with stall detection
+- **Extensive Logging**: Detailed logging of:
+  - System capabilities
+  - Input analysis
+  - Encoding parameters
+  - Progress updates
+  - Final statistics
 
 ## 📋 Requirements
 
@@ -65,6 +85,14 @@ Disclaimer: This tool is my personal project is expected to be full of bad pract
 
 ## 💻 Usage
 
+### Basic Usage
+
+```bash
+python main.py -i /path/to/input
+```
+
+or if you Prefer not to use command line arguments
+
 ### Environment Variables
 
 Create a `.env` file in the project root with the following options:
@@ -75,21 +103,29 @@ INPUT_FILE=/path/to/input
 OUTPUT_FILE=/path/to/output
 ```
 
-### Basic Usage
-
 ```bash
 python main.py
 ```
 
-or
-
-```bash
-make run
-```
-
 ### Advanced Usage
 
-You can change the config in the main.py file and see all the available settings in the config class in utils.py
+You can change the config in the `main.py` file by modifying the `config` object. The available settings are:
+For example, you can modify the `config` object in the `main.py` file like this:
+
+```python
+config = {
+    "max_ref_frames": "6",
+    "group_of_pictures": "120",
+    "audio_bitrate": "768k",
+    "audio_codec": "eac3",
+    "audio_channel": "6",
+    "preset": EncodingPreset.VERYSLOW,
+    "hdr_params": {
+        "max_cll": "1600,400",
+        "master_display": "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50)",
+    },
+}
+```
 
 ## ⚙️ Configuration
 
@@ -123,6 +159,21 @@ You can change the config in the main.py file and see all the available settings
 - `hdr_params`: HDR parameters to use
 - `realtime`: Real-time encoding mode
 - `b_frames`: Number of B-frames to use
+
+Additional Advanced Settings:
+
+- `dv_profile`: Dolby Vision profile configuration
+- `dv_bl_present_flag`: Dolby Vision base layer flag
+- `dv_el_present_flag`: Dolby Vision enhancement layer flag
+- `dv_bl_signal_compatibility_id`: Dolby Vision compatibility ID
+- `profile_v`: Video profile setting
+- `max_ref_frames`: Maximum reference frames
+- `group_of_pictures`: GOP size configuration
+- `audio_channel`: Audio channel configuration (up to 7.1 surround)
+
+### Environment Variables Support
+
+The tool supports configuration through environment variables:
 
 ## 🔍 Advanced Features
 
