@@ -131,7 +131,15 @@ class CustomLogger(logging.Logger):
 
     def log_verification(self, output_file: Path) -> None:
         """Maintains original interface with improved subprocess handling"""
-        verify_cmd = ["ffprobe", "-v", "error", "-i", str(output_file), "-show_streams", "-show_format"]
+        verify_cmd = [
+            "ffprobe",
+            "-v",
+            "error",
+            "-i",
+            str(output_file),
+            "-show_streams",
+            "-show_format",
+        ]
 
         try:
             # Use subprocess with timeout and proper cleanup

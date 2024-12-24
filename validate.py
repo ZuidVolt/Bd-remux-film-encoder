@@ -51,7 +51,12 @@ def is_hardware_encoder_available(encoder_name: str) -> bool:
 def is_valid_video_header(header: bytes) -> bool:
     """Check if the file header is a valid video header."""
     # Common video file signatures
-    signatures = {"mkv": b"\x1a\x45\xdf\xa3", "mp4": b"ftyp", "avi": b"RIFF", "mov": b"moov"}
+    signatures = {
+        "mkv": b"\x1a\x45\xdf\xa3",
+        "mp4": b"ftyp",
+        "avi": b"RIFF",
+        "mov": b"moov",
+    }
 
     if len(header) < MIN_HEADER_LENGTH:  # Need at least MIN_HEADER_LENGTH bytes for most signatures
         return log_error_and_return_false("File header is too short to determine validity.")

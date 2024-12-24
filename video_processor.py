@@ -622,7 +622,13 @@ class VideoProcessor:
             cmd = self._build_command(output_path, target_bitrate)
 
             logger.info("Starting encoding...")
-            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+            )
 
             self._monitor_encoding_process(process, encoding_timeout_seconds)
             self._verify_output(output_path, process)

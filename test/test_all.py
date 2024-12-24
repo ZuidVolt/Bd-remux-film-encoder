@@ -8,7 +8,12 @@ from video_processor import VideoProcessor, EncodingConfig, EncodingError
 class TestVideoProcessor:
     @pytest.fixture
     def mock_config(self):
-        return EncodingConfig(target_size_gb=4.0, maintain_dolby_vision=True, copy_audio=True, copy_subtitles=True)
+        return EncodingConfig(
+            target_size_gb=4.0,
+            maintain_dolby_vision=True,
+            copy_audio=True,
+            copy_subtitles=True,
+        )
 
     @pytest.fixture
     def processor(self, mock_config, tmp_path):
@@ -46,7 +51,12 @@ class TestVideoProcessorIntegration:
         input_file = tmp_path / "input.mp4"
         output_file = tmp_path / "output.mp4"
 
-        config = EncodingConfig(target_size_gb=1.0, maintain_dolby_vision=False, copy_audio=True, copy_subtitles=True)
+        config = EncodingConfig(
+            target_size_gb=1.0,
+            maintain_dolby_vision=False,
+            copy_audio=True,
+            copy_subtitles=True,
+        )
 
         processor = VideoProcessor(input_file, config)
         processor.encode(output_file)
@@ -115,6 +125,13 @@ def sample_video_file(tmp_path):
 def mock_ffprobe_output():
     """Provide mock ffprobe output for testing."""
     return {
-        "streams": [{"codec_type": "video", "width": 1920, "height": 1080, "r_frame_rate": "30/1"}],
+        "streams": [
+            {
+                "codec_type": "video",
+                "width": 1920,
+                "height": 1080,
+                "r_frame_rate": "30/1",
+            }
+        ],
         "format": {"duration": "60.0", "size": "1073741824"},
     }
