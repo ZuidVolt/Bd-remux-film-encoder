@@ -3,19 +3,22 @@ import subprocess
 import time
 import sys
 from datetime import datetime
+from typing import Any
 from contextlib import suppress
+from pathlib import Path
+from utils import ProbeData
 
 
 class CustomLogger(logging.Logger):
-    def __init__(self, name):  # Keeping the original simple interface
+    def __init__(self, name: str) -> None:
         super().__init__(name)
         self.setLevel(logging.INFO)
         self._setup_handlers()
         self.last_flush = time.time()
-        self.flush_interval = 30  # 30 seconds default flush interval
-        self._max_log_size = 10 * 1024 * 1024  # 10MB default, hidden implementation detail
+        self.flush_interval: int = 30  # 30 seconds default flush interval
+        self._max_log_size: int = 10 * 1024 * 1024  # 10MB default, hidden implementation detail
 
-    def _setup_handlers(self):
+    def _setup_handlers(self) -> None:
         """Setup handlers maintaining original behavior but with internal improvements"""
         # Stream handler setup (exactly as original)
         stream_handler = logging.StreamHandler(sys.stdout)
@@ -28,7 +31,7 @@ class CustomLogger(logging.Logger):
         file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
         self.addHandler(file_handler)
 
-    def _should_flush(self):
+    def _should_flush(self) -> bool:
         """Internal method for flush control"""
         current_time = time.time()
         if (current_time - self.last_flush) >= self.flush_interval:
@@ -36,31 +39,43 @@ class CustomLogger(logging.Logger):
             return True
         return False
 
-    def info(self, msg, *args, **kwargs):
+    def info(self, msg: Any, *args: Any, **kwargs: Any) -> None:
         """Maintains original interface but with controlled flushing"""
         super().info(msg, *args, **kwargs)
         if self._should_flush():
             self._flush_handlers()
 
-    def warning(self, msg, *args, **kwargs):
+    def warning(self, msg: Any, *args: Any, **kwargs: Any) -> None:
         """Maintains original interface but with immediate flush"""
         super().warning(msg, *args, **kwargs)
         self._flush_handlers()  # Always flush warnings
 
-    def error(self, msg, *args, **kwargs):
+    def error(self, msg: Any, *args: Any, **kwargs: Any) -> None:
         """Maintains original interface but with immediate flush"""
         super().error(msg, *args, **kwargs)
         self._flush_handlers()  # Always flush errors
 
-    def _flush_handlers(self):
+    def _flush_handlers(self) -> None:
         """Internal method for controlled flushing"""
         for handler in self.handlers:
-            with suppress(OSError):  # Using contextlib.suppress instead of try-except-pass
+            with suppress(OSError):
                 handler.flush()
 
-    def log_input_analysis(self, probe_data):
+    def log_frame(self, frame: str) -> None:
+        """Logs frame information, but only logs every 30 seconds."""
+        seconds: int = 60  # Log every 60 seconds
+        current_time = time.time()
+        if not hasattr(self, "last_frame_log_time"):
+            self.last_frame_log_time = current_time
+        if current_time - self.last_frame_log_time >= seconds:
+            self.info(f"Frame: {frame}")
+            self.last_frame_log_time = current_time
+
+    def log_input_analysis(self, probe_data: ProbeData) -> None:
         """Maintains exact original interface and output format"""
-        if not isinstance(probe_data, dict) or "streams" not in probe_data:
+        try:
+            _streams = probe_data["streams"]
+        except KeyError:
             self.error("Invalid probe data format")
             return
 
@@ -90,7 +105,7 @@ class CustomLogger(logging.Logger):
             codec = stream.get("codec_name", "unknown")
             self.info(f"Subtitle Stream {idx + 1}: {codec}, Language: {language}")
 
-    def log_encoding_start(self, output_file, target_bitrate, cmd):
+    def log_encoding_start(self, output_file: Path, target_bitrate: float, cmd: list[str]) -> None:
         """Maintains exact original interface"""
         self.info("\n=== Starting Encoding Process ===")
         self.info(f"Output File: {output_file}")
@@ -98,7 +113,7 @@ class CustomLogger(logging.Logger):
         self.info("FFmpeg Command:")
         self.info(" ".join(str(c) for c in cmd))
 
-    def log_encoding_complete(self, input_file, output_file, encoding_duration):
+    def log_encoding_complete(self, input_file: Path, output_file: Path, encoding_duration: float) -> None:
         """Maintains exact original interface with improved error handling"""
         try:
             input_size = input_file.stat().st_size / (1024 * 1024 * 1024)  # GB
@@ -114,7 +129,7 @@ class CustomLogger(logging.Logger):
         except (OSError, ZeroDivisionError) as e:
             self.error(f"Error calculating file statistics: {e!s}")
 
-    def log_verification(self, output_file):
+    def log_verification(self, output_file: Path) -> None:
         """Maintains original interface with improved subprocess handling"""
         verify_cmd = ["ffprobe", "-v", "error", "-i", str(output_file), "-show_streams", "-show_format"]
 
@@ -123,7 +138,7 @@ class CustomLogger(logging.Logger):
             process = subprocess.Popen(verify_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
             try:
-                stdout, stderr = process.communicate(timeout=300)  # 5-minute timeout
+                _stdout, stderr = process.communicate(timeout=300)  # 5-minute timeout
 
                 if process.returncode != 0:
                     self.error("Output file verification: FAILED")
@@ -138,20 +153,20 @@ class CustomLogger(logging.Logger):
 
             except subprocess.TimeoutExpired:
                 process.kill()
-                stdout, stderr = process.communicate()
+                _stdout, stderr = process.communicate()
                 self.error("Verification process timed out")
 
         except Exception as e:
             self.error(f"Verification error: {e!s}")
 
-    def log_final_stats(self, start_time):
+    def log_final_stats(self, start_time: float) -> None:
         """Maintains exact original interface"""
         total_duration = time.time() - start_time
         self.info(f"\nTotal Processing Time: {total_duration / 3600:.2f} hours")
         self.info("=== Processing Completed Successfully ===")
 
-    def log_estimated_duration(self, duration) -> None:
-        total_frames_guess: int = duration * 24
+    def log_estimated_duration(self, duration: float) -> None:
+        total_frames_guess: int = int(duration * 24)
         avg_time_per_frame: float = (
             0.018  # This is a rough estimate and may vary based on the specifics of the default encoding process
         )
@@ -159,8 +174,8 @@ class CustomLogger(logging.Logger):
         estimated_time_in_mins: float = estimated_time_in_seconds / 60
         self.info(f"Estimated time for encoding: {estimated_time_in_mins:.2f} minutes")
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Clean up resources on deletion"""
         for handler in self.handlers:
-            with suppress(Exception):  # Using contextlib.suppress instead of try-except-pass
+            with suppress(Exception):
                 handler.close()

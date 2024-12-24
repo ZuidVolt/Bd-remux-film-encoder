@@ -5,6 +5,7 @@ import shutil
 import re
 import time
 from pathlib import Path
+from subprocess import Popen
 from typing import Optional, Union, cast
 
 from custom_logger import CustomLogger as Logger
@@ -88,8 +89,7 @@ class VideoProcessor:
             self.duration = float(format_info["duration"])
 
             # Get video stream
-            video_stream = next((s for s in self.probe_data["streams"] if s["codec_type"] == "video"), None)  # type: ignore
-
+            video_stream = next((s for s in self.probe_data["streams"] if s["codec_type"] == "video"), None)
             if video_stream:
                 # Detect HDR/DoVi features
                 self.video_metadata = {
@@ -147,9 +147,9 @@ class VideoProcessor:
             ):
                 tags = stream.get("tags", {})
                 if tags.get("language", "").lower() in ["eng", "english"]:
-                    indexes[stream_type].append(stream["index"])  # type: ignore
+                    indexes[stream_type].append(stream["index"])
             else:
-                indexes[stream_type].append(stream["index"])  # type: ignore
+                indexes[stream_type].append(stream["index"])
 
         return indexes
 
@@ -252,7 +252,7 @@ class VideoProcessor:
         codec_multiplier = hevc_efficiency_multiplier if codec_name == "hevc" else 1.0  # HEVC is more efficient
 
         # Calculate audio bitrate requirements
-        audio_streams = sum(1 for s in self.probe_data["streams"] if s["codec_type"] == "audio")  # type: ignore
+        audio_streams = sum(1 for s in self.probe_data["streams"] if s["codec_type"] == "audio")
         audio_bitrate = int(self.config.audio_bitrate.rstrip("k")) * 1000
         total_audio_bits = audio_streams * audio_bitrate * self.duration if self.config.copy_audio else 0
 
@@ -288,7 +288,7 @@ class VideoProcessor:
 
         return target_bitrate
 
-    def _build_command(self, output_path: Path, target_bitrate: int) -> list[str]:
+    def _build_command(self, output_path: Path, target_bitrate: int) -> list[str]:  # noqa: C901
         self._check_dolby_vision()
 
         if self.hw_support is None:
@@ -327,8 +327,6 @@ class VideoProcessor:
                     "-allow_sw",
                     "1" if self.config.allow_sw_fallback else "0",
                     # Video format settings
-                    "-pix_fmt",
-                    "p010le",
                     "-profile:v",
                     "main10",
                     # Bitrate controls
@@ -354,20 +352,20 @@ class VideoProcessor:
                     "-metadata:s:v:0",
                     f"dv_bl_signal_compatibility_id={self.dv_bl_signal_compatibility_id}",
                     # Encoding settings
+                    "-max_ref_frames",
+                    self.config.max_ref_frames,
                     "-quality",
-                    self.config.quality_preset,
-                    "-alpha_quality",
-                    "0.9",
+                    self.config.quality_preset.value,
                     "-field_order",
                     "progressive",
                     "-probesize",
                     "50000000",
-                    "-g",
-                    "48",
                     "-realtime",
                     self.config.realtime,
                     "-bf",
                     self.config.b_frames,
+                    "-g",
+                    self.config.group_of_pictures,
                     # Container tag
                     "-tag:v",
                     "dvh1",  # Dolby Vision tag
@@ -389,26 +387,20 @@ class VideoProcessor:
                     "hvc1",
                     "-allow_sw",
                     "1" if self.config.allow_sw_fallback else "0",
-                    "-pix_fmt",
-                    "p010le",
                     "-profile:v",
                     "main10",
                     "-quality",
-                    self.config.quality_preset,
+                    self.config.quality_preset.value,
                     "-colorspace",
                     video_stream.get("color_space", "bt2020nc"),
-                    "-color_primaries",
-                    video_stream.get("color_primaries", "bt2020"),
-                    "-color_trc",
-                    video_stream.get("color_transfer", "smpte2084"),
-                    "-alpha_quality",
-                    "0.9",
                     "-field_order",
                     "progressive",
                     "-probesize",
                     "50000000",
+                    "-max_ref_frames",
+                    self.config.max_ref_frames,
                     "-g",
-                    "48",
+                    self.config.group_of_pictures,
                     "-realtime",
                     self.config.realtime,
                     "-bf",
@@ -449,8 +441,6 @@ class VideoProcessor:
                     "copy",
                     "-b:a",
                     self.config.audio_bitrate,
-                    "-metadata:s:a",
-                    "spatial_audio=1",
                 ],
             )
         else:
@@ -460,21 +450,146 @@ class VideoProcessor:
                     self.config.audio_codec,
                     "-b:a",
                     self.config.audio_bitrate,
-                    "-metadata:s:a",
-                    "spatial_audio=1",
                 ],
             )
 
         if self.config.copy_subtitles:
             cmd.extend(["-c:s", "copy"])
 
+        if use_hw and self.has_dolby_vision:  # hdr metadata
+            cmd.extend(
+                [
+                    "-map_metadata",
+                    "0",
+                    # macOS specific metadata
+                    "-metadata:s:v",
+                    "hdr_version=1.0",  # Explicit HDR version
+                    "-metadata:s:v",
+                    "mastering_display_metadata_present=1",  # Explicit HDR metadata flag
+                    "-metadata:s:v",
+                    "encoder=hevc_videotoolbox",  # Explicit encoder info
+                    # Color volume metadata (helps with Retina display mapping)
+                    "-metadata:s:v",
+                    "BT.2020_compatibility=1",
+                    "-metadata:s:v",
+                    "max_content_light_level=1000",
+                    "-metadata:s:v",
+                    "max_frame_average_light_level=400",
+                    "-metadata:s:v",
+                    "apple_hdr_profile=8.4",  # Helps with Apple devices HDR handling
+                    "-metadata:s:v",
+                    "apple_display_primaries=bt2020",  # Explicit Apple color primaries
+                    # new audio metadata
+                    "-metadata:s:a",
+                    "encoder=FFmpeg",
+                    "-metadata:s:a",
+                    "dolby_digital_plus=1",
+                    "-metadata:s:a",
+                    "dolby_atmos=1",
+                    "-metadata:s:a",
+                    "spatial_audio=1",
+                    "-metadata:s:a",
+                    "apple_spatial_audio=1",
+                    # new caption metadata
+                    "-map_chapters",
+                    "0",
+                    # new muxing queue size
+                    "-max_muxing_queue_size",
+                    "4096",
+                    str(output_path),
+                ],
+            )
+            return cmd
+
         # Output settings
-        cmd.extend(["-map_metadata", "0", "-map_chapters", "0", "-max_muxing_queue_size", "4096", str(output_path)])
+        cmd.extend(
+            [
+                "-map_metadata",
+                "0",
+                # macOS specific metadata
+                "-metadata:s:v",
+                "encoder=hevc_videotoolbox",  # Explicit encoder info
+                # Color volume metadata (helps with Retina display mapping)
+                "-metadata:s:v",
+                "BT.2020_compatibility=1",
+                "-metadata:s:v",
+                "max_content_light_level=1000",
+                "-metadata:s:v",
+                "max_frame_average_light_level=400",
+                "-metadata:s:v",
+                "apple_hdr_profile=8.4",  # Helps with Apple devices HDR handling
+                "-metadata:s:v",
+                "apple_display_primaries=bt2020",  # Explicit Apple color primaries
+                # new audio metadata
+                "-metadata:s:a",
+                "encoder=FFmpeg",
+                "-metadata:s:a",
+                "dolby_digital_plus=1",
+                "-metadata:s:a",
+                "dolby_atmos=1",
+                "-metadata:s:a",
+                "spatial_audio=1",
+                "-metadata:s:a",
+                "apple_spatial_audio=1",
+                # new caption metadata
+                "-map_chapters",
+                "0",
+                # new muxing queue size
+                "-max_muxing_queue_size",
+                "4096",
+                str(output_path),
+            ],
+        )
         return cmd
+
+    def _validate_output_path(self, output_path: Union[str, Path]) -> Path:
+        """
+        Validate the output path and ensure it doesn't already exist with content.
+        """
+        output_path = Path(output_path)
+        if output_path.exists() and output_path.stat().st_size > 0:
+            raise FileExistsError(f"Output file exists: {output_path}")
+        return output_path
+
+    def _monitor_encoding_process(self, process: Popen[str], encoding_timeout_seconds: int) -> None:
+        if process.stderr is None:
+            raise EncodingError("Failed to open stderr pipe")
+
+        last_progress = time.time()
+        progress_pattern = re.compile(r"frame=\s*(\d+)")
+
+        while True:
+            line = process.stderr.readline()
+            if not line and process.poll() is not None:
+                break
+
+            if line:
+                if "frame=" in line:
+                    last_progress = time.time()
+                    if match := progress_pattern.search(line):
+                        logger.log_frame(match.group(1))
+                elif "error" in line.lower():
+                    logger.error(line.strip())
+
+            if time.time() - last_progress > encoding_timeout_seconds:
+                process.terminate()
+                raise EncodingError("Encoding stalled")
+
+    def _verify_output(self, output_path: Path, process: Popen[str]) -> None:
+        if process.returncode != 0:
+            raise EncodingError(f"FFmpeg failed with code {process.returncode}")
+
+        if output_path.exists():
+            final_size = output_path.stat().st_size / 1024**3
+            logger.info(f"Completed. Output size: {final_size:.2f}GB")
+            subprocess.run(["ffprobe", str(output_path)], check=True, capture_output=True)
+        else:
+            raise EncodingError("Output file not created")
 
     def encode(self, output_path: Union[str, Path]) -> None:
         """
         Encode the input file to the specified output path.
+
         Args:
             output_path (Union[str, Path]): The path to the output file.
 
@@ -482,60 +597,28 @@ class VideoProcessor:
             FileExistsError: If the output file already exists.
             EncodingError: If the encoding process fails.
         """
-
         encoding_timeout_seconds = 30
 
-        output_path = Path(output_path)
-        if output_path.exists() and output_path.stat().st_size > 0:
-            raise FileExistsError(f"Output file exists: {output_path}")
-
         try:
+            output_path = self._validate_output_path(output_path)
+
             if not self.probe_data:
                 self.probe_file()
 
             target_bitrate = self._calculate_bitrate()
             cmd = self._build_command(output_path, target_bitrate)
-            logger.info("Starting encoding...")
 
+            logger.info("Starting encoding...")
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
 
-            if process.stderr is None:
-                raise EncodingError("Failed to open stderr pipe")
-
-            last_progress = time.time()
-            progress_pattern = re.compile(r"frame=\s*(\d+)")
-
-            while True:
-                line = process.stderr.readline()
-                if not line and process.poll() is not None:
-                    break
-
-                if line:
-                    if "frame=" in line:
-                        last_progress = time.time()
-                        if match := progress_pattern.search(line):
-                            logger.info(f"Frame: {match.group(1)}")
-                    elif "error" in line.lower():
-                        logger.error(line.strip())
-
-                if time.time() - last_progress > encoding_timeout_seconds:
-                    process.terminate()
-                    raise EncodingError("Encoding stalled")
-
-            if process.returncode != 0:
-                raise EncodingError(f"FFmpeg failed with code {process.returncode}")
-
-            if output_path.exists():
-                final_size = output_path.stat().st_size / 1024**3
-                logger.info(f"Completed. Output size: {final_size:.2f}GB")
-                subprocess.run(["ffprobe", str(output_path)], check=True, capture_output=True)
-            else:
-                raise EncodingError("Output file not created")
+            self._monitor_encoding_process(process, encoding_timeout_seconds)
+            self._verify_output(output_path, process)
 
         except Exception as e:
             logger.error(f"Encoding failed: {e!s}")
-            if output_path.exists():
-                output_path.unlink()
+            output_path_obj = Path(output_path)  # Convert to Path to handle Union type
+            if output_path_obj.exists():
+                output_path_obj.unlink()
             raise
 
 

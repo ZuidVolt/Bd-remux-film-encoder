@@ -27,9 +27,18 @@ class EncodingPreset(Enum):
     VERYSLOW = "veryslow"
 
 
-class StreamDict(TypedDict, total=False):
+class EncodingPresetVideotoolbox(Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    SLOW = "slow"
+
+
+class RequiredStreamFields(TypedDict):
     index: int
     codec_type: str
+
+
+class OptionalStreamFields(TypedDict, total=False):
     codec_name: str
     height: int
     width: int
@@ -40,17 +49,13 @@ class StreamDict(TypedDict, total=False):
     tags: dict[str, str]
 
 
+class StreamDict(RequiredStreamFields, OptionalStreamFields):
+    pass
+
+
 class ProbeData(TypedDict):
     streams: list[StreamDict]
     format: dict[str, Any]
-
-
-# class SideData(TypedDict):
-#     side_data_type: str
-#     dv_profile: int
-#     dv_bl_present_flag: int
-#     dv_el_present_flag: int
-#     dv_bl_signal_compatibility_id: int
 
 
 class EncodingConfig:
@@ -66,16 +71,20 @@ class EncodingConfig:
         use_hardware_acceleration: bool = True,
         hardware_encoder: str = "hevc_videotoolbox",
         fallback_encoder: str = "libx265",
-        quality_preset: str = "slow",
+        quality_preset: EncodingPresetVideotoolbox = EncodingPresetVideotoolbox.MEDIUM,
         allow_sw_fallback: bool = True,
         audio_codec: str = "aac",
         audio_bitrate: str = "384k",
-        audio_channel: str = "8",
+        audio_channel: str = "4",
         min_video_bitrate: int = 8_000_000,  # 8 Mbps
         max_video_bitrate: int = 30_000_000,  # 30 Mbps
         hdr_params: Optional[dict[str, str]] = None,
-        realtime: str = "true",
-        b_frames: str = "2",
+        realtime: str = "false",
+        b_frames: str = "6",
+        pix_fmt: str = "p010le",
+        profile_v: str = "main10",
+        max_ref_frames: str = "4",
+        group_of_pictures: str = "140",
     ):
         self.target_size_gb = target_size_gb
         self.preset = preset
@@ -102,3 +111,7 @@ class EncodingConfig:
         self.b_frames = b_frames
         self.min_video_bitrate = min_video_bitrate
         self.max_video_bitrate = max_video_bitrate
+        self.pix_fmt = pix_fmt
+        self.profile_v = profile_v
+        self.max_ref_frames = max_ref_frames
+        self.group_of_pictures = group_of_pictures

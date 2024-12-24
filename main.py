@@ -1,17 +1,56 @@
-# main.py
 import subprocess
 import time
 from pathlib import Path
 import os
+import argparse
 from dotenv import load_dotenv
 from env_file_handler import check_env_file
 from video_processor import VideoProcessor
 from custom_logger import CustomLogger as Logger
-from utils import EncodingPreset, EncodingConfig
+from validate import validate_encoding_setup
+from utils import EncodingPreset, EncodingConfig, EncodingPresetVideotoolbox
 
 
 # Create a custom logger
 logger = Logger(__name__)
+
+
+def get_file_paths() -> tuple[Path, Path]:
+    """
+    Get input and output file paths. For command line input, output path is automatically
+    generated in a 'finished' subdirectory. For environment variables, both paths must be specified.
+
+    Returns:
+        tuple[Path, Path]: Input file path and output file path
+    """
+    parser = argparse.ArgumentParser(description="Process and encode video files")
+    parser.add_argument("--input", "-i", help="Input video file path")
+    args = parser.parse_args()
+
+    # If command line input is provided, use it and create output path
+    if args.input:
+        input_path = Path(args.input).resolve()
+        # Create output directory as 'finished' in the same directory as input file
+        output_dir = input_path.parent / "finished"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        # Use same filename in the output directory
+        output_path = output_dir / input_path.name
+        return input_path, output_path
+
+    # Otherwise, fall back to environment variables
+    logger.info("No command line arguments provided, falling back to environment variables")
+    check_env_file()
+    load_dotenv()
+
+    input_file_path = os.getenv("INPUT_FILE")
+    output_file_path = os.getenv("OUTPUT_FILE")
+
+    if input_file_path is None or output_file_path is None:
+        raise ValueError(
+            "Either provide input path via command line or set both INPUT_FILE and OUTPUT_FILE environment variables",
+        )
+
+    return Path(input_file_path), Path(output_file_path)
 
 
 def main() -> None:
@@ -29,13 +68,17 @@ def main() -> None:
             english_subtitles_only=True,
             use_hardware_acceleration=True,
             hardware_encoder="hevc_videotoolbox",
-            quality_preset="slow",
+            quality_preset=EncodingPresetVideotoolbox.SLOW,
             allow_sw_fallback=True,
-            audio_bitrate="768k",  # Specify the bitrate for the TrueHD stream
             realtime="false",
             min_video_bitrate=8_000_000,  # 8 Mbps
             max_video_bitrate=30_000_000,  # 30 Mbps
+            b_frames="4",
+            profile_v="main10",
+            max_ref_frames="6",
+            group_of_pictures="120",
             # extra params
+            audio_bitrate="768k",  # Specify the bitrate for the TrueHD stream
             audio_codec="eac3",  # this is a backup if audio copy doesnt work
             audio_channel="6",  # Set to 8 for 7.1 surround sound # TODO: make this work
             # x265 params (only when videotoolbox doesnt work)
@@ -46,19 +89,17 @@ def main() -> None:
             },
         )
 
-        # Setup paths
-        check_env_file()
-        load_dotenv()
+        # Get input and output paths
+        input_file, output_file = get_file_paths()
 
-        input_file_path = os.getenv("INPUT_FILE")
-        output_file_path = os.getenv("OUTPUT_FILE")
-
-        if input_file_path is None or output_file_path is None:
-            raise ValueError("INPUT_FILE and OUTPUT_FILE environment variables must be set")
-
-        input_file: Path = Path(input_file_path)
-        output_file: Path = Path(output_file_path)
-
+        # Validate input file
+        if not input_file.exists():
+            raise FileNotFoundError(f"Input file does not exist: {input_file}")
+        if not os.access(input_file, os.R_OK):
+            raise PermissionError(f"Cannot read input file: {input_file}")
+        if not validate_encoding_setup(input_file, output_file, config):
+            logger.error("Validation failed. Exiting.")
+            return
         logger.info("=== Configuration Settings ===")
         logger.info(f"Input File: {input_file}")
         logger.info(f"Output File: {output_file}")

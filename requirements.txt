@@ -1,5 +1,14 @@
-mypy==1.13.0
+colorama==0.4.6
+coverage==7.6.9
+mando==0.7.1
+mypy==1.14.0
 mypy-extensions==1.0.0
+nodeenv==1.9.1
+psutil==6.1.1
+pyright==1.1.391
 python-dotenv==1.0.1
-ruff==0.8.1
+radon==6.0.1
+ruff==0.8.4
+six==1.17.0
 typing-extensions==4.12.2
+vulture==2.14
