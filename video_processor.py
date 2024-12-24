@@ -9,6 +9,7 @@ from subprocess import Popen
 from typing import Optional, Union, cast
 
 from custom_logger import CustomLogger as Logger
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from utils import ProbeError, ProbeData, EncodingConfig, EncodingError
 
 # Create a custom logger
@@ -52,6 +53,12 @@ class VideoProcessor:
         self.dv_el_present_flag: Optional[int] = None
         self.dv_bl_signal_compatibility_id: Optional[int] = None
 
+    @retry(
+        retry=retry_if_exception_type((subprocess.CalledProcessError, json.JSONDecodeError)),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        before_sleep=lambda retry_state: logger.warning(f"Retrying probe_file attempt {retry_state.attempt_number}"),
+    )
     def probe_file(self) -> ProbeData:
         """
         Probes the input file using ffprobe and returns the probe data.
@@ -586,6 +593,12 @@ class VideoProcessor:
         else:
             raise EncodingError("Output file not created")
 
+    @retry(
+        retry=retry_if_exception_type(EncodingError),
+        stop=stop_after_attempt(2),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        before_sleep=lambda retry_state: logger.warning(f"Retrying encoding attempt {retry_state.attempt_number}"),
+    )
     def encode(self, output_path: Union[str, Path]) -> None:
         """
         Encode the input file to the specified output path.
