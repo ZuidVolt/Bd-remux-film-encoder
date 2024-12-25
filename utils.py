@@ -4,10 +4,6 @@ from typing import Any, TypedDict
 from pydantic import BaseModel, Field
 
 
-class VideoProcessorError(Exception):
-    pass
-
-
 class EncoderError(Exception):
     pass
 

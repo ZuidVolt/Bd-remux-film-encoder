@@ -31,12 +31,6 @@ def log_error_and_return_false(message: str) -> bool:
     return False
 
 
-def validate_encoder_name(encoder_name: str) -> bool:
-    if not isinstance(encoder_name, str) or not encoder_name.strip():
-        return log_error_and_return_false("Invalid encoder name")
-    return True
-
-
 def is_hardware_encoder_available(encoder_name: str) -> bool:
     """Check if the hardware encoder is available."""
     try:
