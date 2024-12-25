@@ -1,3 +1,4 @@
+# test/test_all.py
 import pytest
 from unittest.mock import patch
 from pathlib import Path
@@ -131,7 +132,7 @@ def mock_ffprobe_output():
                 "width": 1920,
                 "height": 1080,
                 "r_frame_rate": "30/1",
-            }
+            },
         ],
         "format": {"duration": "60.0", "size": "1073741824"},
     }
