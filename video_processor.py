@@ -10,7 +10,7 @@ from typing import Optional, Union, cast
 
 from custom_logger import CustomLogger as Logger
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-from utils import ProbeError, ProbeData, EncodingConfig, EncodingError
+from utils import ProbeError, ProbeData, EncodingConfig, EncodingError, StreamDict
 from ffmpeg_configs import dolby_vision_metadata, hevc_metadata
 
 # Create a custom logger
@@ -296,152 +296,206 @@ class VideoProcessor:
 
         return target_bitrate
 
-    def _build_command(self, output_path: Path, target_bitrate: int) -> list[str]:  # noqa: C901
+    def _build_command(self, output_path: Path, target_bitrate: int) -> list[str]:
+        """Build FFmpeg command with the given parameters.
+
+        Args:
+            output_path: Path to the output file
+            target_bitrate: Target bitrate for the video
+
+        Returns:
+            list[str]: FFmpeg command as a list of strings
+        """
         self._check_dolby_vision()
+        self._check_hardware_support()
 
-        if self.hw_support is None:
-            self.hw_support = bool(
-                subprocess.run(["ffmpeg", "-encoders"], capture_output=True, text=True, check=False).stdout.find(
-                    self.config.hardware_encoder,
-                )
-                != -1,
-            )
-
-        use_hw = self.config.use_hardware_acceleration and self.hw_support
+        video_stream = self._get_video_stream()
         stream_indexes = self._get_stream_indexes()
-        video_stream = next((s for s in self.probe_data["streams"] if s["codec_type"] == "video"), None)  # type: ignore
-        if not video_stream:
-            raise ValueError("No video stream found")
+        use_hw = False
+        if self.config.use_hardware_acceleration and self.hw_support is not None:
+            use_hw = self.hw_support
 
+        cmd = self._build_base_command(stream_indexes)
+        cmd.extend(self._build_video_encoding_settings(use_hw, target_bitrate, video_stream))
+        cmd.extend(self._build_audio_subtitle_settings())
+
+        if use_hw and self.has_dolby_vision:  # hdr metadata
+            cmd.extend(dolby_vision_metadata)
+            cmd.extend(
+                [
+                    str(output_path),
+                ],
+            )
+            return cmd
+
+        # Output settings
+        cmd.extend(hevc_metadata)
+        cmd.extend(
+            [
+                str(output_path),
+            ],
+        )
+        return cmd
+
+    def _check_hardware_support(self) -> None:
+        """Check if hardware encoding is supported."""
+        if self.hw_support is None:
+            ffmpeg_output = subprocess.run(["ffmpeg", "-encoders"], capture_output=True, text=True, check=False).stdout
+            self.hw_support = self.config.hardware_encoder in ffmpeg_output
+
+    def _get_video_stream(self) -> StreamDict:
+        """Get the video stream information.
+
+        Returns:
+            StreamDict: Video stream information with required and optional fields
+
+        Raises:
+            ValueError: If no video stream is found or probe data is not available
+        """
+        if self.probe_data is not None:
+            video_stream = next((s for s in self.probe_data["streams"] if s["codec_type"] == "video"), None)
+            if not video_stream:
+                raise ValueError("No video stream found")
+            return video_stream
+        raise ValueError("Probe data is not available")
+
+    def _build_base_command(self, stream_indexes: dict[str, list[int]]) -> list[str]:
+        """Build the base FFmpeg command with input and stream mapping."""
         cmd = ["ffmpeg", "-y", "-hwaccel", "videotoolbox", "-i", str(self.input_file)]
 
         # Map streams
         cmd.extend(["-map", f"0:{stream_indexes['video'][0]}"])
+
         if self.config.copy_audio:
             for idx in stream_indexes["audio"]:
                 cmd.extend(["-map", f"0:{idx}"])
+
         if self.config.copy_subtitles:
             for idx in stream_indexes["subtitle"]:
                 cmd.extend(["-map", f"0:{idx}"])
-        # Video encoding settings
 
+        return cmd
+
+    def _build_dolby_vision_settings(self, target_bitrate: int) -> list[str]:
+        """Build Dolby Vision specific encoding settings."""
+        return [
+            "-c:v",
+            self.config.hardware_encoder,
+            "-allow_sw",
+            "1" if self.config.allow_sw_fallback else "0",
+            "-profile:v",
+            "main10",
+            "-b:v",
+            str(target_bitrate),
+            "-maxrate",
+            str(int(target_bitrate * 1.5)),
+            "-bufsize",
+            str(int(target_bitrate * 2)),
+            "-map_metadata:s:v:0",
+            "0:s:v:0",
+            "-strict",
+            "-1",
+            "-copy_unknown",
+            "-metadata:s:v:0",
+            f"dv_profile={self.dv_profile}",
+            "-metadata:s:v:0",
+            f"dv_bl_present_flag={self.dv_bl_present_flag}",
+            "-metadata:s:v:0",
+            f"dv_el_present_flag={self.dv_el_present_flag}",
+            "-metadata:s:v:0",
+            f"dv_bl_signal_compatibility_id={self.dv_bl_signal_compatibility_id}",
+            "-max_ref_frames",
+            self.config.max_ref_frames,
+            "-quality",
+            self.config.quality_preset.value,
+            "-field_order",
+            "progressive",
+            "-probesize",
+            "50000000",
+            "-realtime",
+            self.config.realtime,
+            "-bf",
+            self.config.b_frames,
+            "-g",
+            self.config.group_of_pictures,
+            "-tag:v",
+            "dvh1",
+        ]
+
+    def _build_hardware_encoding_settings(self, target_bitrate: int, video_stream: StreamDict) -> list[str]:
+        """Build hardware encoding specific settings."""
+        return [
+            "-c:v",
+            self.config.hardware_encoder,
+            "-b:v",
+            str(target_bitrate),
+            "-maxrate",
+            str(int(target_bitrate * 1.5)),
+            "-bufsize",
+            str(int(target_bitrate * 2)),
+            "-tag:v",
+            "hvc1",
+            "-allow_sw",
+            "1" if self.config.allow_sw_fallback else "0",
+            "-profile:v",
+            "main10",
+            "-quality",
+            self.config.quality_preset.value,
+            "-colorspace",
+            video_stream.get("color_space", "bt2020nc"),
+            "-field_order",
+            "progressive",
+            "-probesize",
+            "50000000",
+            "-max_ref_frames",
+            self.config.max_ref_frames,
+            "-g",
+            self.config.group_of_pictures,
+            "-realtime",
+            self.config.realtime,
+            "-bf",
+            self.config.b_frames,
+        ]
+
+    def _build_software_encoding_settings(self, target_bitrate: int, video_stream: StreamDict) -> list[str]:
+        """Build software encoding specific settings."""
+        x265_params = [
+            f"bitrate={target_bitrate // 1000}",
+            "hdr10=1",
+            f"colorprim={video_stream.get('color_primaries', 'bt2020')}",
+            f"transfer={video_stream.get('color_transfer', 'smpte2084')}",
+            f"colormatrix={video_stream.get('color_space', 'bt2020nc')}",
+            "repeat-headers=1",
+            f"max-cll={self.config.hdr_params['max_cll']}",
+            f"master-display={self.config.hdr_params['master_display']}",
+        ]
+
+        return [
+            "-c:v",
+            self.config.fallback_encoder,
+            "-preset",
+            self.config.preset.value,
+            "-x265-params",
+            ":".join(x265_params),
+            "-profile:v",
+            "main10",
+            "-pix_fmt",
+            "yuv420p10le",
+        ]
+
+    def _build_video_encoding_settings(self, use_hw: bool, target_bitrate: int, video_stream: StreamDict) -> list[str]:
+        """Build video encoding settings based on hardware support and Dolby Vision."""
         if use_hw and self.has_dolby_vision:
             logger.info("Using hardware encoding with Dolby Vision!!!")
-            cmd.extend(
-                [
-                    # Encoder settings
-                    "-c:v",
-                    self.config.hardware_encoder,
-                    "-allow_sw",
-                    "1" if self.config.allow_sw_fallback else "0",
-                    # Video format settings
-                    "-profile:v",
-                    "main10",
-                    # Bitrate controls
-                    "-b:v",
-                    str(target_bitrate),
-                    "-maxrate",
-                    str(int(target_bitrate * 1.5)),
-                    "-bufsize",
-                    str(int(target_bitrate * 2)),
-                    # Dolby Vision mapping
-                    "-map_metadata:s:v:0",
-                    "0:s:v:0",
-                    "-strict",
-                    "-1",
-                    "-copy_unknown",
-                    # Dolby Vision metadata
-                    "-metadata:s:v:0",
-                    f"dv_profile={self.dv_profile}",
-                    "-metadata:s:v:0",
-                    f"dv_bl_present_flag={self.dv_bl_present_flag}",
-                    "-metadata:s:v:0",
-                    f"dv_el_present_flag={self.dv_el_present_flag}",
-                    "-metadata:s:v:0",
-                    f"dv_bl_signal_compatibility_id={self.dv_bl_signal_compatibility_id}",
-                    # Encoding settings
-                    "-max_ref_frames",
-                    self.config.max_ref_frames,
-                    "-quality",
-                    self.config.quality_preset.value,
-                    "-field_order",
-                    "progressive",
-                    "-probesize",
-                    "50000000",
-                    "-realtime",
-                    self.config.realtime,
-                    "-bf",
-                    self.config.b_frames,
-                    "-g",
-                    self.config.group_of_pictures,
-                    # Container tag
-                    "-tag:v",
-                    "dvh1",  # Dolby Vision tag
-                ],
-            )
-
+            return self._build_dolby_vision_settings(target_bitrate)
         if use_hw:
-            cmd.extend(
-                [
-                    "-c:v",
-                    self.config.hardware_encoder,
-                    "-b:v",
-                    str(target_bitrate),
-                    "-maxrate",
-                    str(int(target_bitrate * 1.5)),
-                    "-bufsize",
-                    str(int(target_bitrate * 2)),
-                    "-tag:v",
-                    "hvc1",
-                    "-allow_sw",
-                    "1" if self.config.allow_sw_fallback else "0",
-                    "-profile:v",
-                    "main10",
-                    "-quality",
-                    self.config.quality_preset.value,
-                    "-colorspace",
-                    video_stream.get("color_space", "bt2020nc"),
-                    "-field_order",
-                    "progressive",
-                    "-probesize",
-                    "50000000",
-                    "-max_ref_frames",
-                    self.config.max_ref_frames,
-                    "-g",
-                    self.config.group_of_pictures,
-                    "-realtime",
-                    self.config.realtime,
-                    "-bf",
-                    self.config.b_frames,
-                ],
-            )
-        else:
-            x265_params = [
-                f"bitrate={target_bitrate // 1000}",
-                "hdr10=1",
-                f"colorprim={video_stream.get('color_primaries', 'bt2020')}",
-                f"transfer={video_stream.get('color_transfer', 'smpte2084')}",
-                f"colormatrix={video_stream.get('color_space', 'bt2020nc')}",
-                "repeat-headers=1",
-                f"max-cll={self.config.hdr_params['max_cll']}",
-                f"master-display={self.config.hdr_params['master_display']}",
-            ]
-            cmd.extend(
-                [
-                    "-c:v",
-                    self.config.fallback_encoder,
-                    "-preset",
-                    self.config.preset.value,
-                    "-x265-params",
-                    ":".join(x265_params),
-                    "-profile:v",
-                    "main10",
-                    "-pix_fmt",
-                    "yuv420p10le",
-                ],
-            )
+            return self._build_hardware_encoding_settings(target_bitrate, video_stream)
+        return self._build_software_encoding_settings(target_bitrate, video_stream)
 
-        # Audio and subtitle settings
+    def _build_audio_subtitle_settings(self) -> list[str]:
+        """Build audio and subtitle encoding settings."""
+        cmd = []
+
         if self.config.copy_audio:
             cmd.extend(
                 [
@@ -464,23 +518,6 @@ class VideoProcessor:
         if self.config.copy_subtitles:
             cmd.extend(["-c:s", "copy"])
 
-        if use_hw and self.has_dolby_vision:  # hdr metadata
-            cmd.extend(dolby_vision_metadata)
-            cmd.extend(
-                [
-                    str(output_path),
-                ],
-            )
-
-            return cmd
-
-        # Output settings
-        cmd.extend(hevc_metadata)
-        cmd.extend(
-            [
-                str(output_path),
-            ],
-        )
         return cmd
 
     def _validate_output_path(self, output_path: Union[str, Path]) -> Path:
