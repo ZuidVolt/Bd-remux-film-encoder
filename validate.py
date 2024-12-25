@@ -18,13 +18,17 @@ MIN_VALID_SIZE = 100 * 1024 * 1024  # 100 MB
 MIN_HEADER_LENGTH = 8  # Minimum length required for most video file signatures
 
 
+def log_warning(message: str) -> None:
+    logger.warning(message)
+
+
+def log_error(message: str) -> None:
+    logger.error(message)
+
+
 def log_error_and_return_false(message: str) -> bool:
     logger.error(message)
     return False
-
-
-def log_warning(message: str) -> None:
-    logger.warning(message)
 
 
 def validate_encoder_name(encoder_name: str) -> bool:
@@ -76,7 +80,7 @@ def is_valid_video_header(header: bytes) -> bool:
     return log_error_and_return_false("File header does not match any known video format signatures.")
 
 
-def validate_system_resources(input_file: Path, output_file: Path) -> bool:
+def validate_system_resources(input_file: Path, output_file: Path) -> None:
     """Validate system resources before encoding."""
     try:
         # Get the parent directory of the output file for disk space check
@@ -86,8 +90,8 @@ def validate_system_resources(input_file: Path, output_file: Path) -> bool:
         available_memory = psutil.virtual_memory().available
 
         if free_space <= file_size * 2:
-            return log_error_and_return_false(
-                "Insufficient disk space for processing. Required: at least double the input file size.",
+            log_warning(
+                "Insufficient disk space for processing. Recommended: at least double the input file size.",
             )
 
         if available_memory <= MIN_REQUIRED_MEMORY:
@@ -96,11 +100,10 @@ def validate_system_resources(input_file: Path, output_file: Path) -> bool:
                 "Processing may be slow or unstable.",
             )
 
-        return True
     except (FileNotFoundError, PermissionError) as e:
-        return log_error_and_return_false(f"Directory error: {e}")
+        log_error(f"Directory error: {e}")
     except Exception as e:
-        return log_error_and_return_false(f"Unexpected error during resource validation: {e}")
+        log_error(f"Unexpected error during resource validation: {e}")
 
 
 def validate_config(config: EncodingConfig) -> bool:
@@ -205,8 +208,7 @@ def validate_encoding_setup(input_file: Path, output_file: Path, config: Encodin
             return False
 
         # Validate system resources
-        if not validate_system_resources(input_file, output_file):
-            return False
+        validate_system_resources(input_file, output_file)
 
         # Validate encoding configuration
         if not validate_config(config):
