@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any
 from contextlib import suppress
 from pathlib import Path
-from utils import ProbeData
+from utils import ProbeData, StreamDict
 
 
 class CustomLogger(logging.Logger):
@@ -73,9 +73,8 @@ class CustomLogger(logging.Logger):
 
     def log_input_analysis(self, probe_data: ProbeData) -> None:
         """Maintains exact original interface and output format"""
-        try:
-            _streams = probe_data["streams"]
-        except KeyError:
+        streams: list[StreamDict] | None = probe_data.get("streams")
+        if streams is None:
             self.error("Invalid probe data format")
             return
 
