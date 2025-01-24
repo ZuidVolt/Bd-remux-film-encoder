@@ -16,7 +16,7 @@ class EncodingError(EncoderError):
     pass
 
 
-class EncodingPreset(str, Enum):
+class EncodingPreset(Enum):
     ULTRAFAST = "ultrafast"
     SUPERFAST = "superfast"
     VERYFAST = "veryfast"
@@ -28,7 +28,7 @@ class EncodingPreset(str, Enum):
     VERYSLOW = "veryslow"
 
 
-class EncodingPresetVideotoolbox(str, Enum):
+class EncodingPresetVideotoolbox(Enum):
     LOW = "low"
     MEDIUM = "medium"
     SLOW = "slow"
