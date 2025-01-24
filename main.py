@@ -130,8 +130,8 @@ def main() -> None:
         logger.log_input_analysis(probe_data)
 
         # Start encoding
-        target_bitrate = processor._calculate_bitrate()
-        cmd = processor._build_command(output_file, target_bitrate)
+        target_bitrate = processor.calculate_bitrate()
+        cmd = processor.build_command(output_file, target_bitrate)
         logger.log_encoding_start(output_file, target_bitrate, cmd)
         logger.log_estimated_duration(processor.duration)
         encoding_start_time = time.time()

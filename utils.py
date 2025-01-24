@@ -107,4 +107,4 @@ class EncodingConfig(BaseModel):
     group_of_pictures: str = Field(default="140")
 
     class Config:
-        arbitrary_types_allowed = True
+        arbitrary_types_allowed: bool = True

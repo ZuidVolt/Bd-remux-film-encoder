@@ -9,7 +9,7 @@ format:
 	ruff format --line-length 120 .
 
 ruff-check:
-	ruff check --extend-select F,W,N,C90,B,UP,RET,SIM,RUF,NPY,PD,ARG,TCH,TID,PTH,Q,ISC,PIE,YTT,ASYNC,C4,T10,A,COM,RSE,PL,E,PGH --fix --unsafe-fixes --ignore "PLR0913,PD901,E501,G004,RUF100,PGH003,PLR0911,PLR0912" $(PYTHON_FILES)
+	ruff check --fix --unsafe-fixes $(PYTHON_FILES)
 
 mypy-strict:
 	mypy --strict $(PYTHON_FILES)

@@ -6,7 +6,7 @@ import re
 import time
 from pathlib import Path
 from subprocess import Popen
-from typing import Optional, Union, cast
+from typing import cast, Any
 
 from custom_logger import CustomLogger as Logger
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
@@ -30,29 +30,30 @@ class VideoProcessor:
         hw_support (bool): Whether hardware acceleration is supported.
     """
 
-    def __init__(self, input_file: Union[str, Path], config: Optional[EncodingConfig] = None):
+    def __init__(self, input_file: str | Path, config: EncodingConfig | None = None):
         """
         Initializes the VideoProcessor instance.
 
         Args:
-            input_file (Union[str, Path]): The input video file.
-            config (Optional[EncodingConfig]): The encoding configuration. Defaults to None.
+            input_file (str | Path): The input video file.
+            config (EncodingConfig | None): The encoding configuration. Defaults to None.
         """
-        self.input_file = Path(input_file)
-        self.config = config or EncodingConfig()
+        self.input_file: Path = Path(input_file)
+        self.config: EncodingConfig = config or EncodingConfig()
         if not self.input_file.exists() or not self.input_file.is_file():
             raise FileNotFoundError(f"Invalid input file: {self.input_file}")
         if not all(shutil.which(tool) for tool in ["ffmpeg", "ffprobe"]):
             raise OSError("ffmpeg or ffprobe not found in PATH")
-        self.probe_data: Optional[ProbeData] = None
+        self.probe_data: ProbeData | None = None
         self.input_size_gb: float = 0.0
         self.duration: float = 0.0
-        self.hw_support: Optional[bool] = None
+        self.hw_support: bool | None = None
         self.has_dolby_vision: bool = False
-        self.dv_profile: Optional[int] = None
-        self.dv_bl_present_flag: Optional[int] = None
-        self.dv_el_present_flag: Optional[int] = None
-        self.dv_bl_signal_compatibility_id: Optional[int] = None
+        self.dv_profile: int | None = None
+        self.dv_bl_present_flag: int | None = None
+        self.dv_el_present_flag: int | None = None
+        self.dv_bl_signal_compatibility_id: int | None = None
+        self.video_metadata: dict[str, Any] = {}
 
     @retry(
         retry=retry_if_exception_type((subprocess.CalledProcessError, json.JSONDecodeError)),
@@ -89,7 +90,7 @@ class VideoProcessor:
             probe_data = json.loads(result.stdout)
 
             # Ensure the loaded data matches our expected type
-            self.probe_data = cast(ProbeData, probe_data)
+            self.probe_data = cast("ProbeData", probe_data)
             format_info = self.probe_data["format"]
 
             # Basic file info
@@ -128,7 +129,7 @@ class VideoProcessor:
                 logger.info(f"Input: {self.input_size_gb:.2f}GB, Duration: {self.duration:.2f}s")
                 logger.info(
                     f"Video: {self.video_metadata['width']}x{self.video_metadata['height']}, "
-                    f"{'HDR10' if self.video_metadata['is_hdr10'] else ''}"
+                    f"{'HDR10' if self.video_metadata['is_hdr10'] else ''} "
                     f"{'Dolby Vision' if self.video_metadata['has_dovi'] else ''}",
                 )
 
@@ -154,7 +155,7 @@ class VideoProcessor:
                 self.config.english_subtitles_only and stream_type == "subtitle"
             ):
                 tags = stream.get("tags", {})
-                if tags.get("language", "").lower() in ["eng", "english"]:
+                if tags.get("language", "").lower() in {"eng", "english"}:
                     indexes[stream_type].append(stream["index"])
             else:
                 indexes[stream_type].append(stream["index"])
@@ -176,11 +177,11 @@ class VideoProcessor:
             return  # No video stream found, so no Dolby Vision metadata
 
         # Check for Dolby Vision side data
-        side_data = video_stream.get("side_data_list", [])
-        if isinstance(side_data, list):
-            dovi_conf = next((sd for sd in side_data if sd.get("side_data_type") == "DOVI configuration record"), None)
-        else:
-            dovi_conf = None
+        side_data = cast(list[dict[str, Any]], video_stream.get("side_data_list", []))
+        dovi_conf: dict[str, Any] | None = next(
+            (sd for sd in side_data if sd.get("side_data_type") == "DOVI configuration record"),
+            None,
+        )
 
         if dovi_conf:
             self.has_dolby_vision = True
@@ -191,6 +192,14 @@ class VideoProcessor:
             logger.info(f"Detected Dolby Vision Profile {self.dv_profile}")
         else:
             logger.info("No Dolby Vision metadata detected")
+
+    def calculate_bitrate(self) -> int:
+        """Public method to calculate bitrate."""
+        return self._calculate_bitrate()
+
+    def build_command(self, output_path: Path, target_bitrate: int) -> list[str]:
+        """Public method to build command."""
+        return self._build_command(output_path, target_bitrate)
 
     def _calculate_bitrate(self) -> int:
         """
@@ -361,7 +370,7 @@ class VideoProcessor:
 
     def _build_base_command(self, stream_indexes: dict[str, list[int]]) -> list[str]:
         """Build the base FFmpeg command with input and stream mapping."""
-        cmd = ["ffmpeg", "-y", "-hwaccel", "videotoolbox", "-i", str(self.input_file)]
+        cmd: list[str] = ["ffmpeg", "-y", "-hwaccel", "videotoolbox", "-i", str(self.input_file)]
 
         # Map streams
         cmd.extend(["-map", f"0:{stream_indexes['video'][0]}"])
@@ -419,7 +428,7 @@ class VideoProcessor:
             "-g",
             self.config.group_of_pictures,
             "-tag:v",
-            "dvh1",
+            "hvc1",
         ]
 
     def _build_hardware_encoding_settings(self, target_bitrate: int, video_stream: StreamDict) -> list[str]:
@@ -494,7 +503,7 @@ class VideoProcessor:
 
     def _build_audio_subtitle_settings(self) -> list[str]:
         """Build audio and subtitle encoding settings."""
-        cmd = []
+        cmd: list[str] = []
 
         if self.config.copy_audio:
             cmd.extend(
@@ -520,7 +529,7 @@ class VideoProcessor:
 
         return cmd
 
-    def _validate_output_path(self, output_path: Union[str, Path]) -> Path:
+    def _validate_output_path(self, output_path: str | Path) -> Path:
         """
         Validate the output path and ensure it doesn't already exist with content.
         """
@@ -545,7 +554,8 @@ class VideoProcessor:
                 if "frame=" in line:
                     last_progress = time.time()
                     if match := progress_pattern.search(line):
-                        logger.log_frame(match.group(1))
+                        frame_number = match.group(1)
+                        logger.info(f"Processed frame: {frame_number}")
                 elif "error" in line.lower():
                     logger.error(line.strip())
 
@@ -570,7 +580,7 @@ class VideoProcessor:
         wait=wait_exponential(multiplier=1, min=4, max=10),
         before_sleep=lambda retry_state: logger.warning(f"Retrying encoding attempt {retry_state.attempt_number}"),
     )
-    def encode(self, output_path: Union[str, Path]) -> None:
+    def encode(self, output_path: str | Path) -> None:
         """
         Encode the input file to the specified output path.
 

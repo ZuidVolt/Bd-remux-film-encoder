@@ -4,7 +4,7 @@ import subprocess
 import time
 import sys
 from datetime import datetime
-from typing import Any
+from typing import Any, override
 from contextlib import suppress
 from pathlib import Path
 from utils import ProbeData, StreamDict
@@ -15,9 +15,11 @@ class CustomLogger(logging.Logger):
         super().__init__(name)
         self.setLevel(logging.INFO)
         self._setup_handlers()
-        self.last_flush = time.time()
+        self.last_flush: float = time.time()
         self.flush_interval: int = 30  # 30 seconds default flush interval
         self._max_log_size: int = 10 * 1024 * 1024  # 10MB default, hidden implementation detail
+        self.log_file: str = ""  # Initialize log_file
+        self.last_frame_log_time: float = 0.0  # Initialize last_frame_log_time
 
     def _setup_handlers(self) -> None:
         """Setup handlers maintaining original behavior but with internal improvements"""
@@ -32,7 +34,7 @@ class CustomLogger(logging.Logger):
         file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
         self.addHandler(file_handler)
 
-    def _should_flush(self) -> bool:
+    def should_flush(self) -> bool:
         """Internal method for flush control"""
         current_time = time.time()
         if (current_time - self.last_flush) >= self.flush_interval:
@@ -40,42 +42,35 @@ class CustomLogger(logging.Logger):
             return True
         return False
 
-    def info(self, msg: Any, *args: Any, **kwargs: Any) -> None:
-        """Maintains original interface but with controlled flushing"""
-        super().info(msg, *args, **kwargs)
-        if self._should_flush():
-            self._flush_handlers()
-
-    def warning(self, msg: Any, *args: Any, **kwargs: Any) -> None:
-        """Maintains original interface but with immediate flush"""
-        super().warning(msg, *args, **kwargs)
-        self._flush_handlers()  # Always flush warnings
-
-    def error(self, msg: Any, *args: Any, **kwargs: Any) -> None:
-        """Maintains original interface but with immediate flush"""
-        super().error(msg, *args, **kwargs)
-        self._flush_handlers()  # Always flush errors
-
-    def _flush_handlers(self) -> None:
+    def flush_handlers(self) -> None:
         """Internal method for controlled flushing"""
         for handler in self.handlers:
             with suppress(OSError):
                 handler.flush()
 
-    def log_frame(self, frame: str) -> None:
-        """Logs frame information, but only logs every 30 seconds."""
-        seconds: int = 60  # Log every 60 seconds
-        current_time = time.time()
-        if not hasattr(self, "last_frame_log_time"):
-            self.last_frame_log_time = current_time
-        if current_time - self.last_frame_log_time >= seconds:
-            self.info(f"Frame: {frame}")
-            self.last_frame_log_time = current_time
+    @override
+    def info(self, msg: Any, *args: Any, **kwargs: Any) -> None:
+        """Maintains original interface but with controlled flushing"""
+        super().info(msg, *args, **kwargs)
+        if self.should_flush():
+            self.flush_handlers()
+
+    @override
+    def warning(self, msg: Any, *args: Any, **kwargs: Any) -> None:
+        """Maintains original interface but with immediate flush"""
+        super().warning(msg, *args, **kwargs)
+        self.flush_handlers()  # Always flush warnings
+
+    @override
+    def error(self, msg: Any, *args: Any, **kwargs: Any) -> None:
+        """Maintains original interface but with immediate flush"""
+        super().error(msg, *args, **kwargs)
+        self.flush_handlers()  # Always flush errors
 
     def log_input_analysis(self, probe_data: ProbeData) -> None:
         """Maintains exact original interface and output format"""
-        streams: list[StreamDict] | None = probe_data.get("streams")
-        if streams is None:
+        streams: list[StreamDict] = probe_data.get("streams", [])
+        if not streams:
             self.error("Invalid probe data format")
             return
 
